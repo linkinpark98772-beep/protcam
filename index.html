@@ -1,6 +1,6 @@
 <!--
   Buscador de Enfermeros y Cuidadores en Mérida, Yucatán
-  Funcionalidad completa con Firebase Firestore y autenticación de administrador por Google.
+  Funcionalidad completa con Firebase Firestore y acceso de administrador por Clave Secreta Remota.
 -->
 <!DOCTYPE html>
 <html lang="es">
@@ -15,11 +15,14 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .card { transition: all 0.2s ease-in-out; }
         .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); }
-        .admin-btn { transition: background-color 0.2s; }
+        .auth-btn { transition: background-color 0.2s; }
         .admin-panel { transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out; }
         .modal-overlay { background-color: rgba(0, 0, 0, 0.5); z-index: 1000; }
         .rating-star { color: #facc15; }
+        .warning-star { color: #ef4444; } /* Estrellas Rojas para Advertencias */
         .delete-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .profile-img { width: 60px; height: 60px; object-fit: cover; border-radius: 50%; }
+        .placeholder-icon { width: 60px; height: 60px; background-color: #a5b4fc; color: #fff; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 24px; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -30,22 +33,27 @@
             <h1 class="text-3xl font-bold text-indigo-700">
                 <i class="fas fa-search mr-2"></i> Enfermeros Yucatán
             </h1>
-            <button id="adminAuthButton" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-indigo-700 admin-btn">
-                <i class="fab fa-google mr-2"></i> Admin Login
-            </button>
+            <div class="flex space-x-4">
+                <!-- Botón de Acceso de Usuarios -->
+                <button id="userAuthButton" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-600 auth-btn" onclick="handleUserAuth()">
+                    <i class="fas fa-user mr-2"></i> Acceso Usuarios
+                </button>
+                <!-- Botón de Acceso de Administrador -->
+                <button id="adminAuthButton" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-indigo-700 auth-btn" onclick="handleAdminAuth()">
+                    <i class="fas fa-key mr-2"></i> Acceso Admin
+                </button>
+            </div>
         </div>
     </header>
 
     <!-- Panel de Búsqueda y Filtro -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- Bloque de Configuración Inicial (Eliminado permanentemente) -->
-
         <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
             <h2 class="text-2xl font-semibold text-gray-800 mb-4">Buscar Profesionales en Mérida, Yucatán</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="text" id="searchInput" placeholder="Buscar por nombre..." class="p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                <select id="specialtyFilter" class="p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Buscar por nombre..." class="p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                <select id="specialtyFilter" onchange="handleSearch()" class="p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white">
                     <option value="">Todas las Especialidades</option>
                     <option value="General">General</option>
                     <option value="Pediatría">Pediatría</option>
@@ -54,9 +62,16 @@
                     <option value="Cuidador">Cuidador</option>
                     <option value="Fisioterapia">Fisioterapia</option>
                 </select>
-                <button onclick="handleSearch()" class="bg-indigo-600 text-white p-3 rounded-lg font-semibold shadow hover:bg-indigo-700 transition duration-150">
-                    <i class="fas fa-search mr-2"></i> Buscar
-                </button>
+                <!-- Tercera columna para el botón de búsqueda y el nuevo filtro de rating -->
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center p-2 border border-red-300 rounded-lg bg-red-50">
+                        <input type="checkbox" id="lowRatingFilter" class="w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500" onchange="handleSearch()">
+                        <label for="lowRatingFilter" class="ml-2 text-sm font-medium text-red-700 whitespace-nowrap">Mal Recomendados (< 3.0 o 2+ Advertencias)</label>
+                    </div>
+                    <button onclick="handleSearch()" class="flex-grow bg-indigo-600 text-white p-3 rounded-lg font-semibold shadow hover:bg-indigo-700 transition duration-150 hidden md:inline-block">
+                        <i class="fas fa-search mr-2"></i> Buscar
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -78,6 +93,7 @@
             </div>
             <div class="mt-4">
                 <input type="text" id="adminPhone" placeholder="Teléfono de Contacto" class="p-3 border border-indigo-300 rounded-lg w-full mb-4">
+                <input type="url" id="adminPhotoURL" placeholder="URL de la Foto (Opcional)" class="p-3 border border-indigo-300 rounded-lg w-full mb-4">
                 <button onclick="addNurse()" class="w-full bg-green-600 text-white p-3 rounded-lg font-semibold shadow-md hover:bg-green-700 transition duration-150">
                     <i class="fas fa-plus-circle mr-2"></i> + Agregar Nuevo Profesional
                 </button>
@@ -118,65 +134,307 @@
             <p class="text-gray-700 mb-6">¿Está seguro de que desea eliminar a <span id="deleteModalName" class="font-bold"></span> de la lista?</p>
             <div class="flex justify-end space-x-3">
                 <button onclick="closeModal('deleteModal')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-100">Cancelar</button>
-                <button id="confirmDeleteButton" class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold shadow hover:bg-red-700 transition duration-150">Eliminar</button>
+                <button id="confirmDeleteButton" onclick="deleteNurse()" class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold shadow hover:bg-red-700 transition duration-150">Eliminar</button>
             </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Edición de Profesional (NUEVO - AMPLIADO) -->
+    <div id="editModal" class="fixed inset-0 hidden modal-overlay items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-4xl w-full transform transition-all duration-300 scale-95 opacity-0">
+            
+            <h3 class="text-3xl font-bold text-indigo-700 mb-6 border-b pb-2">Gestión del Profesional: <span id="editModalNameTitle"></span></h3>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- COLUMNA 1: Edición de Datos y Calificación (ADMIN) -->
+                <div>
+                    <h4 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-1">Datos y Calificación Administrativa</h4>
+                    <input type="hidden" id="editModalId">
+                    
+                    <!-- Datos principales -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <label class="block">Nombre
+                            <input type="text" id="editName" class="p-3 border border-indigo-300 rounded-lg w-full">
+                        </label>
+                        <label class="block">Especialidad
+                            <select id="editSpecialty" class="p-3 border border-indigo-300 rounded-lg w-full bg-white">
+                                <option value="General">General</option>
+                                <option value="Pediatría">Pediatría</option>
+                                <option value="Geriatría">Geriatría</option>
+                                <option value="Cuidados Intensivos">Cuidados Intensivos</option>
+                                <option value="Cuidador">Cuidador</option>
+                                <option value="Fisioterapia">Fisioterapia</option>
+                            </select>
+                        </label>
+                    </div>
+                    
+                    <!-- Experiencia y Rating Base -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <label class="block">Años Exp.
+                            <input type="number" id="editExperience" class="p-3 border border-indigo-300 rounded-lg w-full" min="0">
+                        </label>
+                        <label class="block">Teléfono
+                            <input type="text" id="editPhone" class="p-3 border border-indigo-300 rounded-lg w-full">
+                        </label>
+                    </div>
+
+                    <!-- Calificación Base (Estrellas Doradas) -->
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-300 flex justify-between items-center mb-6">
+                        <div class="flex items-center space-x-2">
+                            <h4 class="text-lg font-semibold text-yellow-800">Rating Base (Estrellas Doradas):</h4>
+                            <span id="editRatingDisplay" class="text-2xl font-bold text-yellow-600">0.0</span>
+                            <i class="fas fa-star rating-star text-2xl"></i>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="updateRatingBase(-0.1)" class="bg-gray-400 text-white w-10 h-10 rounded-full hover:bg-gray-500 font-bold text-lg">-</button>
+                            <button onclick="updateRatingBase(0.1)" class="bg-yellow-600 text-white w-10 h-10 rounded-full hover:bg-yellow-700 font-bold text-lg">+</button>
+                        </div>
+                    </div>
+                    
+                    <label class="block mb-6">URL de Foto
+                        <input type="url" id="editPhotoURL" class="p-3 border border-indigo-300 rounded-lg w-full">
+                    </label>
+
+                    <!-- Advertencias (Estrellas Rojas) -->
+                    <div class="bg-red-50 p-4 rounded-lg border border-red-300 flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <h4 class="text-lg font-semibold text-red-700">Advertencias (Estrellas Rojas):</h4>
+                            <span id="editWarningsDisplay" class="text-2xl font-bold text-red-600">0</span>
+                            <i class="fas fa-star warning-star text-2xl"></i>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="updateWarning(-1)" class="bg-gray-400 text-white w-10 h-10 rounded-full hover:bg-gray-500 font-bold text-lg">-</button>
+                            <button onclick="updateWarning(1)" class="bg-red-600 text-white w-10 h-10 rounded-full hover:bg-red-700 font-bold text-lg">+</button>
+                        </div>
+                    </div>
+                    <p class="text-sm text-red-600 mt-2">Nota: Cada estrella roja reduce el rating final en 0.5 puntos.</p>
+                    
+                    <!-- NUEVO: Display de Rating Final Calculado -->
+                    <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-300 mt-4 flex justify-between items-center">
+                        <h4 class="text-lg font-semibold text-indigo-800">Rating Final Calculado:</h4>
+                        <span id="finalRatingCalculatedDisplay" class="text-2xl font-bold text-green-600">--</span>
+                    </div>
+                </div>
+
+                <!-- COLUMNA 2: Comentarios de Usuarios -->
+                <div>
+                    <h4 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-1">Comentarios y Feedback de Usuarios</h4>
+                    <div id="commentsContainer" class="max-h-96 overflow-y-auto p-2 border border-gray-200 rounded-lg bg-gray-50">
+                        <p class="text-center text-gray-500">Cargando comentarios...</p>
+                    </div>
+
+                    <button onclick="submitUserComment()" class="mt-4 w-full bg-indigo-500 text-white p-2 rounded-lg font-semibold shadow hover:bg-indigo-600 transition duration-150">
+                        <i class="fas fa-comment-dots mr-2"></i> Añadir Comentario de Prueba (Admin)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex justify-end space-x-3 mt-6 border-t pt-4">
+                <button onclick="closeModal('editModal')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-100">Cancelar</button>
+                <button onclick="saveEdit()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold shadow hover:bg-indigo-700 transition duration-150">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Contacto -->
+    <div id="contactModal" class="fixed inset-0 hidden modal-overlay items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0">
+            <h3 class="text-2xl font-bold text-indigo-700 mb-4" id="modalName"></h3>
+            <p class="text-gray-700 mb-2"><i class="fas fa-user-tag text-indigo-500 mr-2"></i> Especialidad: <span id="modalSpecialty" class="font-semibold"></span></p>
+            <p class="text-gray-700 mb-4"><i class="fas fa-map-marker-alt text-indigo-500 mr-2"></i> Ubicación: <span id="modalLocation">Mérida, Yucatán</span></p>
+
+            <div class="bg-indigo-50 p-4 rounded-lg mb-4">
+                <p class="text-sm font-semibold text-indigo-700 mb-1">Información de Contacto:</p>
+                <p class="text-lg font-bold text-gray-800" id="modalPhone"></p>
+            </div>
+            <button onclick="closeModal('contactModal')" class="w-full bg-gray-500 text-white p-3 rounded-lg font-semibold shadow hover:bg-gray-600 transition duration-150 mt-2">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Eliminación -->
+    <div id="deleteModal" class="fixed inset-0 hidden modal-overlay items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0">
+            <h3 class="text-xl font-bold text-red-600 mb-4">Confirmar Eliminación</h3>
+            <p class="text-gray-700 mb-6">¿Está seguro de que desea eliminar a <span id="deleteModalName" class="font-bold"></span> de la lista?</p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeModal('deleteModal')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-100">Cancelar</button>
+                <button id="confirmDeleteButton" onclick="deleteNurse()" class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold shadow hover:bg-red-700 transition duration-150">Eliminar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Acceso por Clave Secreta (ADMIN) -->
+    <div id="secretKeyModal" class="fixed inset-0 hidden modal-overlay items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0">
+            <h3 class="text-2xl font-bold text-indigo-700 mb-4"><i class="fas fa-user-lock mr-2"></i> Acceso de Administrador</h3>
+            <p class="text-gray-600 mb-4">Ingrese la clave secreta para acceder al panel de administración.</p>
+            
+            <label class="block text-sm font-medium text-gray-700">Correo Electrónico de Admin</label>
+            <input type="email" id="secretEmailInput" class="p-3 border border-gray-300 rounded-lg w-full mb-4 bg-gray-100 text-gray-700 cursor-not-allowed" readonly value="linkinpark98772@gmail.com">
+            
+            <label for="secretKeyInput" class="block text-sm font-medium text-gray-700">Clave Secreta</label>
+            <input type="password" id="secretKeyInput" placeholder="Clave Secreta" class="p-3 border border-indigo-300 rounded-lg w-full mb-4 focus:ring-indigo-500 focus:border-indigo-500">
+            
+            <button id="loginWithKeyButton" onclick="attemptLoginWithKey()" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold shadow hover:bg-indigo-700 transition duration-150">
+                <i class="fas fa-lock-open mr-2"></i> Acceder
+            </button>
+            <button onclick="closeModal('secretKeyModal')" class="w-full bg-gray-500 text-white p-3 rounded-lg font-semibold shadow hover:bg-gray-600 transition duration-150 mt-2">Cancelar</button>
+            
+            <p id="keyError" class="text-red-500 text-sm mt-3 hidden text-center">Clave incorrecta. Intente de nuevo.</p>
+        </div>
+    </div>
+    
+    <!-- Modal de Registro/Login de Usuarios -->
+    <div id="userAuthModal" class="fixed inset-0 hidden modal-overlay items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0">
+            <h3 class="text-2xl font-bold text-blue-700 mb-4" id="userAuthTitle"><i class="fas fa-sign-in-alt mr-2"></i> Acceso de Usuarios</h3>
+            <p class="text-gray-600 mb-4">Regístrese o inicie sesión para poder dejar comentarios.</p>
+
+            <label for="userEmailInput" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+            <input type="email" id="userEmailInput" placeholder="su.correo@ejemplo.com" class="p-3 border border-blue-300 rounded-lg w-full mb-4 focus:ring-blue-500 focus:border-blue-500">
+            
+            <label for="userPasswordInput" class="block text-sm font-medium text-gray-700">Contraseña</label>
+            <input type="password" id="userPasswordInput" placeholder="Contraseña (min 6 caracteres)" class="p-3 border border-blue-300 rounded-lg w-full mb-4 focus:ring-blue-500 focus:border-blue-500">
+            
+            <p id="userAuthError" class="text-red-500 text-sm mt-3 hidden text-center mb-4"></p>
+
+            <button id="userLoginButton" onclick="handleUserAuthSubmit('login')" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition duration-150">
+                <i class="fas fa-sign-in-alt mr-2"></i> Iniciar Sesión
+            </button>
+            
+            <button id="userRegisterButton" onclick="handleUserAuthSubmit('register')" class="w-full bg-green-600 text-white p-3 rounded-lg font-semibold shadow hover:bg-green-700 transition duration-150 mt-2">
+                <i class="fas fa-user-plus mr-2"></i> Registrarse
+            </button>
+
+            <button onclick="closeModal('userAuthModal')" class="w-full bg-gray-500 text-white p-3 rounded-lg font-semibold shadow hover:bg-gray-600 transition duration-150 mt-4">Cancelar</button>
         </div>
     </div>
 
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, getDocs, where, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, deleteDoc, onSnapshot, collection, query, getDocs, addDoc, getDoc, setDoc, updateDoc, getDocFromCache } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
+        // --- CONFIGURACIÓN GLOBAL DE FIREBASE Y VARIABLES DE ESTADO ---
         let db;
         let auth;
         let userId = null;
-        let userEmail = null;
-        let isAdminLoggedIn = false;
+        let userEmail = null; 
+        let isAdminLoggedIn = false; 
+        let isUserLoggedIn = false;
         let currentNurses = [];
+        let currentWarnings = 0; 
+        let currentBaseRating = 0; 
+        let currentEditNurseId = null; 
+        let globalDeleteId = null; 
 
+        // CRÍTICO: Configuración de Firebase Inyectada
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // CRÍTICO: Correo de administrador para verificar permisos
-        const ADMIN_EMAIL = "linkinpark98772@gmail.com"; 
-
-        // CRÍTICO: Ubicación de los profesionales
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCfDU668hPen9kntBeJWgF1-Gm8pcl124",
+            authDomain: "enfermeros-b0a14.firebaseapp.com",
+            projectId: "enfermeros-b0a14",
+            storageBucket: "enfermeros-b0a14.firebasestorage.app",
+            messagingSenderId: "928679188656",
+            appId: "1:928679188656:web:5945fb948db980c7c20375",
+            measurementId: "G-2RKYJJ4BVN"
+        };
+        
+        const ADMIN_EMAIL = "linkinpark98772@gmail.com";
         const requiredLocation = "Mérida, Yucatán"; 
-
-        // CRÍTICO: Rutas de Firebase
-        // RUTA PÚBLICA ESTABLE para la configuración de administrador (LECTURA y ESCRITURA)
-        const ADMIN_CONFIG_PATH = `artifacts/${appId}/public/data/config/admin_emails`;
-        // RUTA PÚBLICA ESTABLE para los profesionales
         const NURSE_COLLECTION_PATH = `artifacts/${appId}/public/data/nurses_list`;
+        const NURSE_COMMENTS_BASE_PATH = `artifacts/${appId}/public/data/nurse_comments`;
+        const DEFAULT_PHOTO_URL = "https://placehold.co/100x100/A5B4FC/ffffff?text=ENF"; 
 
-
-        // Datos de ejemplo para poblar la base de datos si está vacía
         const mockNurses = [
-            { name: 'Laura Gómez', specialty: 'General', experience: 10, rating: 4.8, location: requiredLocation, phone: '9991234567' },
-            { name: 'Roberto Pool', specialty: 'Pediatría', experience: 5, rating: 4.5, location: requiredLocation, phone: '9998765432' },
-            { name: 'María Chan', specialty: 'Geriatría', experience: 15, rating: 4.9, location: requiredLocation, phone: '9995551212' },
-            { name: 'Daniel Pérez', specialty: 'Cuidador', experience: 7, rating: 4.2, location: requiredLocation, phone: '9993339988' },
-            { name: 'Miguel Dzul', specialty: 'Fisioterapia', experience: 6, rating: 4.7, location: requiredLocation, phone: '9992224455' },
-            { name: 'Elena Cauich', specialty: 'Pediatría', experience: 3, rating: 4.0, location: requiredLocation, phone: '9991116677' },
-            { name: 'Gabriel Xiu', specialty: 'General', experience: 8, rating: 4.6, location: requiredLocation, phone: '9997778899' },
-            { name: 'Sofía Mena', specialty: 'Cuidados Intensivos', experience: 12, rating: 5.0, location: requiredLocation, phone: '9994443322' },
+            { name: 'Laura Gómez', specialty: 'General', experience: 10, rating: 4.8, baseRating: 4.8, location: requiredLocation, phone: '9991234567', photoURL: DEFAULT_PHOTO_URL, warnings: 0 },
+            { name: 'Roberto Pool', specialty: 'Pediatría', experience: 5, rating: 4.5, baseRating: 4.5, location: requiredLocation, phone: '9998765432', photoURL: DEFAULT_PHOTO_URL, warnings: 1 },
+            { name: 'María Chan', specialty: 'Geriatría', experience: 15, rating: 3.9, baseRating: 4.9, location: requiredLocation, phone: '9995551212', photoURL: DEFAULT_PHOTO_URL, warnings: 2 },
+            { name: 'Daniel Pérez', specialty: 'Cuidador', experience: 7, rating: 3.2, baseRating: 3.2, location: requiredLocation, phone: '9993339988', photoURL: DEFAULT_PHOTO_URL, warnings: 0 }, 
+            { name: 'Miguel Dzul', specialty: 'Fisioterapia', experience: 6, rating: 4.7, baseRating: 4.7, location: requiredLocation, phone: '9992224455', photoURL: DEFAULT_PHOTO_URL, warnings: 0 },
+            { name: 'Elena Cauich', specialty: 'Pediatría', experience: 3, rating: 4.0, baseRating: 4.0, location: requiredLocation, phone: '9991116677', photoURL: DEFAULT_PHOTO_URL, warnings: 0 },
         ];
         
+        // --- Funciones de Utilidad de Rutas ---
+        function getAdminKeyDocRef(currentUserId) {
+            const finalUserId = (currentUserId && currentUserId !== 'placeholder_no_auth') ? currentUserId : appId;
+            const adminKeyCollection = `artifacts/${appId}/users/${finalUserId}/config_keys`;
+            return doc(db, adminKeyCollection, 'master_key');
+        }
+
+        function getCommentsCollectionRef(nurseId) {
+            return collection(db, `${NURSE_COMMENTS_BASE_PATH}/${nurseId}/comments`);
+        }
+
+        /**
+         * Intenta obtener el documento de la clave secreta priorizando el caché.
+         * Si falla en caché, intenta obtener desde el servidor con reintentos.
+         * @param {string} currentUserId - ID del usuario actual o fallback.
+         * @returns {Promise<import("firebase/firestore").DocumentSnapshot>}
+         */
+        async function getAdminKeyDocSecure(currentUserId) {
+            const keyRef = getAdminKeyDocRef(currentUserId);
+            
+            // 1. Intentar leer desde el caché (si está "offline")
+            try {
+                const snap = await getDoc(keyRef, { source: 'cache' });
+                if (snap.exists()) {
+                    console.log("[Firestore] Clave obtenida de CACHÉ.");
+                    return snap;
+                }
+            } catch (e) {
+                console.warn("[Firestore] Fallo al leer de caché. Intentando servidor...");
+                // Continuar al servidor si falla el caché
+            }
+
+            // 2. Intentar leer desde el servidor con reintentos (si está "online")
+            for (let i = 0; i < 3; i++) {
+                try {
+                    if (i > 0) {
+                        const delay = 100 * Math.pow(2, i - 1);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        console.warn(`[Retry ${i + 1}/3] Reintentando conexión con Firestore...`);
+                    }
+                    const snap = await getDoc(keyRef, { source: 'server' });
+                    console.log("[Firestore] Clave obtenida del SERVIDOR.");
+                    return snap;
+                } catch (e) {
+                    if (i === 2) {
+                        throw e; // Lanza el error después del último intento fallido
+                    }
+                }
+            }
+        }
+
+
         // --- FUNCIONES DE BASE DE DATOS Y AUTENTICACIÓN ---
+
+        async function ensureKeyIsSet(currentUserId) {
+            if (!currentUserId || currentUserId === 'placeholder_no_auth') return;
+            try {
+                // Usamos getDoc normal (que intentará caché y luego servidor)
+                const keySnap = await getAdminKeyDocSecure(currentUserId);
+
+                if (!keySnap.exists()) {
+                    await setDoc(getAdminKeyDocRef(currentUserId), { key: "merida2024_admin" });
+                    console.log("[Admin Setup] Clave secreta inicial guardada remotamente en ruta privada.");
+                }
+            } catch (e) {
+                console.error("[Admin Setup] Error al intentar asegurar la clave secreta:", e);
+            }
+        }
 
         async function seedDataIfEmpty() {
             try {
                 const q = query(collection(db, NURSE_COLLECTION_PATH));
                 const snapshot = await getDocs(q);
-
                 if (snapshot.empty) {
                     console.log("Base de datos de enfermeros vacía. Agregando datos de ejemplo...");
                     for (const nurse of mockNurses) {
-                        // Usar addDoc para dejar que Firebase genere el ID
-                        await addDoc(collection(db, NURSE_COLLECTION_PATH), nurse);
+                        const dataToSave = { ...nurse, baseRating: nurse.rating }; 
+                        await addDoc(collection(db, NURSE_COLLECTION_PATH), dataToSave);
                     }
                     console.log("Datos de ejemplo agregados con éxito.");
                 }
@@ -184,142 +442,75 @@
                 console.error("Error al poblar la base de datos:", error);
             }
         }
-
-        async function loadAdminConfig() {
-            try {
-                // Leer desde la RUTA PÚBLICA
-                const docRef = doc(db, ADMIN_CONFIG_PATH);
-                const docSnap = await onSnapshot(docRef, (doc) => {
-                    const data = doc.data();
-                    const allowedEmails = data ? (data.allowedEmails || []) : [];
-                    
-                    // Comprobar si el usuario logueado es administrador
-                    isAdminLoggedIn = userEmail !== null && allowedEmails.includes(userEmail);
-                    updateAdminUI();
-
-                }, (error) => {
-                    // Si falla por permisos o no existe, solo registramos y continuamos.
-                    console.error("Error al cargar la configuración de administrador:", error);
-                    isAdminLoggedIn = false;
-                    updateAdminUI();
-                });
-                return docSnap;
-            } catch (error) {
-                console.error("Error al iniciar la escucha de config admin:", error);
-                isAdminLoggedIn = false;
-                updateAdminUI();
-            }
-        }
         
         function setupRealtimeListener() {
-            // Cargar datos SÓLO si el usuario está autenticado (anónima o Google)
-            if (!userId) {
-                console.error("No se puede iniciar el listener: Usuario no autenticado.");
+            if (!db) {
+                console.error("Firestore no está inicializado.");
                 return;
             }
-
+            
             const nurseQuery = query(collection(db, NURSE_COLLECTION_PATH));
 
             onSnapshot(nurseQuery, (snapshot) => {
                 currentNurses = snapshot.docs.map(doc => ({
                     id: doc.id,
+                    baseRating: doc.data().baseRating || doc.data().rating, 
                     ...doc.data()
                 }));
-                // Forzar el renderizado de la lista con todos los filtros
                 handleSearch(); 
             }, (error) => {
                 console.error("Error al escuchar la colección de enfermeros:", error);
             });
         }
         
-        // Función auxiliar para insertar el correo de administrador (USANDO RUTA PÚBLICA GARANTIZADA)
-        async function ensureAdminEmailIsSet(db, adminEmail) {
+        function initializeFirebase() {
             try {
-                const publicDocRef = doc(db, ADMIN_CONFIG_PATH);
-                const docSnap = await getDoc(publicDocRef);
-                
-                let allowedEmails = [];
-                if (docSnap.exists()) {
-                    allowedEmails = docSnap.data().allowedEmails || [];
-                }
-                
-                // Añadir el correo solo si no está ya presente en la lista pública
-                if (!allowedEmails.includes(adminEmail)) {
-                    allowedEmails.push(adminEmail);
-                    await setDoc(publicDocRef, { allowedEmails: allowedEmails });
-                    console.log(`[Admin Setup] Correo '${adminEmail}' agregado a la lista PÚBLICA.`);
-                }
-            } catch (e) {
-                // Capturar errores de permisos, pero permitir que la app continúe
-                console.error("[Admin Setup] Error al asegurar el correo de administrador:", e);
-                console.warn("Este error puede ser causado por permisos de ESCRITURA.");
-            }
-        }
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
 
-
-        async function initializeFirebase() {
-            try {
-                if (!db) {
-                    const app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
-                }
-
-                // CRÍTICO: 1. AWAIT DE AUTENTICACIÓN INICIAL para obtener el UID
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken).catch(e => {
-                        console.error("Error al iniciar sesión con Custom Token:", e);
-                        return signInAnonymously(auth); // Fallback anónimo
-                    });
-                } else {
-                    await signInAnonymously(auth).catch(e => {
-                        console.error("Error al iniciar sesión anónimamente:", e);
-                    });
-                }
-                
-
-                // Listener de autenticación
+                // Listener de estado de autenticación (CRÍTICO)
                 onAuthStateChanged(auth, async (user) => {
-                    // Este bloque se ejecuta en cada cambio de estado de auth
+                    const userAuthButton = document.getElementById('userAuthButton');
+                    
                     if (user) {
                         userId = user.uid;
-                        userEmail = user.email;
+                        userEmail = user.email; 
+                        isUserLoggedIn = !!user.email; 
                         
-                        // CRÍTICO: Intentar insertar el correo cada vez que se resuelve la autenticación
-                        // Esto se hace aquí para asegurar que el AuthState esté resuelto.
-                        await ensureAdminEmailIsSet(db, ADMIN_EMAIL);
-                        
-                        if (userEmail) { // Solo mostrar salir si es un usuario con email (no anónimo)
-                            document.getElementById('adminAuthButton').textContent = `Salir (${userEmail})`;
-                            document.getElementById('adminAuthButton').classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                            document.getElementById('adminAuthButton').classList.add('bg-red-500', 'hover:bg-red-600');
-                        } else {
-                            // Es usuario anónimo, mostrar login
-                            document.getElementById('adminAuthButton').textContent = 'Admin Login';
-                            document.getElementById('adminAuthButton').classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                            document.getElementById('adminAuthButton').classList.remove('bg-red-500', 'hover:bg-red-600');
-                        }
-                        
+                        isAdminLoggedIn = (userEmail === ADMIN_EMAIL);
                     } else {
-                        // No hay usuario logueado (ni anónimo ni Google)
-                        userId = null;
+                        // Si no hay sesión, usamos el appId como userId de fallback para rutas privadas
+                        userId = appId; 
                         userEmail = null;
-                        document.getElementById('adminAuthButton').textContent = 'Admin Login';
-                        document.getElementById('adminAuthButton').classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                        document.getElementById('adminAuthButton').classList.remove('bg-red-500', 'hover:bg-red-600');
+                        isUserLoggedIn = false;
+                        isAdminLoggedIn = false;
+                    }
+
+                    // Actualizar UI del botón de usuario
+                    if (isUserLoggedIn) {
+                        userAuthButton.textContent = `Salir (${user.email})`;
+                        userAuthButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                        userAuthButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                    } else {
+                        userAuthButton.textContent = 'Acceso Usuarios';
+                        userAuthButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                        userAuthButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
                     }
                     
-                    // Después de actualizar userId/userEmail, comprobamos el acceso
-                    await loadAdminConfig();
-                    
-                    // Iniciamos el listener de datos solo después de que el estado de auth esté listo
-                    if (userId) {
-                        
+                    // Solo inicializar datos y listeners si Firebase está listo
+                    if (db) {
                         await seedDataIfEmpty();
                         setupRealtimeListener();
                     }
-                });
 
+                    // Si el usuario es un placeholder, garantizamos que la clave admin se cree para el primer login.
+                    if (userId && userId !== appId) {
+                        await ensureKeyIsSet(userId);
+                    }
+
+                    updateAdminUI(); 
+                });
                 
             } catch (error) {
                 console.error("Error al inicializar Firebase:", error);
@@ -330,50 +521,157 @@
 
         function updateAdminUI() {
             const panel = document.getElementById('adminPanel');
-            // Nota: Los botones de eliminar se actualizan durante renderNurses
-
+            const authButton = document.getElementById('adminAuthButton');
+            
             if (isAdminLoggedIn) {
                 // Mostrar panel de agregar
                 panel.classList.remove('max-h-0', 'opacity-0');
                 panel.classList.add('max-h-96', 'opacity-100');
+                
+                authButton.textContent = `Salir (${ADMIN_EMAIL})`;
+                authButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                authButton.classList.add('bg-red-500', 'hover:bg-red-600');
             } else {
                 // Ocultar panel de agregar
                 panel.classList.remove('max-h-96', 'opacity-100');
                 panel.classList.add('max-h-0', 'opacity-0');
+                
+                authButton.textContent = 'Acceso Admin';
+                authButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                authButton.classList.remove('bg-red-500', 'hover:bg-red-600');
             }
 
             // Forzar el renderizado para actualizar visibilidad de botones de eliminar
             renderNurses(currentNurses); 
         }
 
-        async function handleAdminAuth() {
-            if (userEmail) {
+        function handleAdminAuth() {
+            if (isAdminLoggedIn) {
                 // Cerrar sesión
-                try {
-                    await signOut(auth);
-                    isAdminLoggedIn = false;
-                    userEmail = null;
-                    updateAdminUI();
-                } catch (error) {
-                    console.error("Error al cerrar sesión:", error);
-                }
+                signOut(auth).catch(e => console.error("Error al cerrar sesión de admin:", e));
             } else {
-                // Iniciar sesión con Google
-                const provider = new GoogleAuthProvider();
-                try {
-                    await signInWithPopup(auth, provider);
-                    // onAuthStateChanged se encarga de actualizar el estado y el UI
-                } catch (error) {
-                    console.error("Error de autenticación con Google:", error);
-                    // El error auth/unauthorized-domain es común en este entorno
-                    alert("Error de inicio de sesión. Por favor, asegúrese de que el dominio está autorizado.");
+                // Iniciar sesión: abrimos el modal de clave secreta
+                openModal('secretKeyModal');
+            }
+        }
+        
+        // --- FUNCIONES DE AUTENTICACIÓN DE USUARIOS (EMAIL/PASS) ---
+        
+        function handleUserAuth() {
+            if (isUserLoggedIn) {
+                // Si el usuario está logueado (no anónimo), lo cerramos
+                signOut(auth).catch(e => console.error("Error al cerrar sesión de usuario:", e));
+            } else {
+                // Si no está logueado, mostramos el modal de login/registro
+                openModal('userAuthModal');
+            }
+        }
+
+        async function handleUserAuthSubmit(action) {
+            const email = document.getElementById('userEmailInput').value;
+            const password = document.getElementById('userPasswordInput').value;
+            const errorDisplay = document.getElementById('userAuthError');
+            errorDisplay.classList.add('hidden');
+
+            if (!email || !password || password.length < 6) {
+                errorDisplay.textContent = "Ingrese un correo válido y una contraseña de al menos 6 caracteres.";
+                errorDisplay.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                if (action === 'register') {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    alert("¡Registro exitoso! Ha iniciado sesión.");
+                } else if (action === 'login') {
+                    await signInWithEmailAndPassword(auth, email, password);
                 }
+                closeModal('userAuthModal');
+            } catch (error) {
+                let msg = "Error de autenticación. ";
+                if (error.code === 'auth/email-already-in-use') {
+                    msg = "Ese correo ya está registrado. Intente Iniciar Sesión.";
+                } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    msg = "Correo o contraseña incorrectos.";
+                } else {
+                    msg += "Código: " + error.code;
+                }
+                errorDisplay.textContent = msg;
+                errorDisplay.classList.remove('hidden');
+            }
+        }
+
+
+        async function attemptLoginWithKey() {
+            const keyInput = document.getElementById('secretKeyInput');
+            const errorMessage = document.getElementById('keyError');
+            const enteredKey = keyInput.value;
+            
+            errorMessage.classList.add('hidden');
+
+            try {
+                // 1. Obtener UID para la ruta (si no está logueado, usamos appId)
+                const currentUserId = auth.currentUser ? auth.currentUser.uid : appId; 
+
+                if (!currentUserId) {
+                     errorMessage.textContent = "Error: El sistema no pudo obtener un ID de usuario válido.";
+                     errorMessage.classList.remove('hidden');
+                     return;
+                }
+
+                // 2. Intentar asegurar la clave y leer usando la función segura
+                let keySnap;
+                try {
+                    keySnap = await getAdminKeyDocSecure(currentUserId);
+                } catch (e) {
+                    console.error("Fallo final al verificar la clave secreta después de reintentos:", e);
+                    errorMessage.textContent = "Error crítico de conexión. Revise su conexión y recargue.";
+                    errorMessage.classList.remove('hidden');
+                    return; 
+                }
+                
+                // 3. Lógica de creación/verificación
+                let storedKey = null;
+
+                if (!keySnap.exists()) {
+                    if (enteredKey === "merida2024_admin") {
+                        // Crear la clave en Firestore si es la maestra por primera vez
+                        await setDoc(getAdminKeyDocRef(currentUserId), { key: "merida2024_admin" });
+                        storedKey = "merida2024_admin";
+                        console.log("[Admin Setup] Clave secreta inicial guardada después del login.");
+                    } else {
+                        errorMessage.textContent = "Clave incorrecta. Intente de nuevo.";
+                        errorMessage.classList.remove('hidden');
+                        return;
+                    }
+                } else {
+                    storedKey = keySnap.data().key;
+                }
+
+                // 4. Verificación final
+                if (enteredKey !== storedKey) {
+                    errorMessage.textContent = "Clave incorrecta. Intente de nuevo.";
+                    errorMessage.classList.remove('hidden');
+                    return;
+                }
+
+                // Si pasa la verificación, se establece el estado de administrador
+                isAdminLoggedIn = true;
+                userEmail = ADMIN_EMAIL; 
+                updateAdminUI();
+                closeModal('secretKeyModal');
+                keyInput.value = ''; 
+
+            } catch (e) {
+                console.error("Error al verificar la clave secreta:", e);
+                errorMessage.textContent = `Error al verificar la clave. Por favor, revise su conexión.`;
+                errorMessage.classList.remove('hidden');
             }
         }
 
         async function addNurse() {
             if (!isAdminLoggedIn) {
-                alert("Acceso denegado. Solo el administrador puede agregar profesionales.");
+                console.error("Acceso denegado. Solo el administrador puede agregar profesionales.");
                 return;
             }
 
@@ -382,19 +680,25 @@
             const experience = parseInt(document.getElementById('adminExperience').value);
             const rating = parseFloat(document.getElementById('adminRating').value);
             const phone = document.getElementById('adminPhone').value;
+            const photoURL = document.getElementById('adminPhotoURL').value || DEFAULT_PHOTO_URL; 
 
             if (!name || !specialty || isNaN(experience) || isNaN(rating) || !phone) {
                 alert("Por favor, complete todos los campos y asegúrese de que los números son válidos.");
                 return;
             }
+            
+            const baseRating = Math.min(5, Math.max(1, rating)); 
 
             const newNurse = {
                 name,
                 specialty,
                 experience: experience,
-                rating: Math.min(5, Math.max(1, rating)), // Asegura que el rating esté entre 1 y 5
+                rating: baseRating, 
+                baseRating: baseRating, // Guardamos el rating inicial como baseRating
                 location: requiredLocation,
                 phone,
+                photoURL: photoURL, 
+                warnings: 0, // Inicia con 0 advertencias
             };
 
             try {
@@ -404,6 +708,7 @@
                 document.getElementById('adminExperience').value = '';
                 document.getElementById('adminRating').value = '';
                 document.getElementById('adminPhone').value = '';
+                document.getElementById('adminPhotoURL').value = '';
                 console.log("Profesional agregado con éxito.");
             } catch (e) {
                 console.error("Error al agregar documento: ", e);
@@ -412,28 +717,27 @@
         }
 
         // Se usa para almacenar el ID del documento a eliminar
-        let nurseToDeleteId = null; 
-
+        
         function openDeleteModal(id, name) {
             if (!isAdminLoggedIn) return;
-            nurseToDeleteId = id;
+            globalDeleteId = id;
             document.getElementById('deleteModalName').textContent = name;
             openModal('deleteModal');
         }
 
         async function deleteNurse() {
-            if (!isAdminLoggedIn || !nurseToDeleteId) {
+            if (!isAdminLoggedIn || !globalDeleteId) {
                 console.error("Acceso denegado o ID no definido.");
                 closeModal('deleteModal');
                 return;
             }
 
             try {
-                const docRef = doc(db, NURSE_COLLECTION_PATH, nurseToDeleteId);
+                const docRef = doc(db, NURSE_COLLECTION_PATH, globalDeleteId);
                 await deleteDoc(docRef);
-                console.log(`Profesional ${nurseToDeleteId} eliminado con éxito.`);
+                console.log(`Profesional ${globalDeleteId} eliminado con éxito.`);
                 closeModal('deleteModal');
-                nurseToDeleteId = null;
+                globalDeleteId = null;
             } catch (e) {
                 console.error("Error al eliminar documento: ", e);
                 alert("Error al eliminar el profesional de la base de datos.");
@@ -441,24 +745,233 @@
             }
         }
 
+        // --- FUNCIONES DE EDICIÓN ---
+
+        function updateWarningDisplay() {
+            document.getElementById('editWarningsDisplay').textContent = currentWarnings;
+        }
+        
+        function updateRatingBaseDisplay() {
+             document.getElementById('editRatingDisplay').textContent = currentBaseRating.toFixed(1);
+        }
+
+        function recalculateAndDisplayFinalRating() {
+            const baseRating = currentBaseRating;
+            const warnings = currentWarnings;
+            const penalty = warnings * 0.5;
+            let calculatedRating = baseRating - penalty;
+            
+            calculatedRating = Math.min(5.0, Math.max(1.0, calculatedRating));
+            
+            const finalRatingElement = document.getElementById('finalRatingCalculatedDisplay');
+            if(finalRatingElement) {
+                finalRatingElement.textContent = calculatedRating.toFixed(1);
+                finalRatingElement.className = `text-2xl font-bold ${calculatedRating < 3.0 ? 'text-red-600' : 'text-green-600'}`;
+            }
+        }
+
+        function updateWarning(delta) {
+            currentWarnings = Math.max(0, currentWarnings + delta); 
+            updateWarningDisplay();
+            recalculateAndDisplayFinalRating(); 
+        }
+
+        function updateRatingBase(delta) {
+            let newRating = currentBaseRating + delta;
+            newRating = Math.min(5.0, Math.max(1.0, newRating)); 
+            currentBaseRating = parseFloat(newRating.toFixed(1));
+            updateRatingBaseDisplay();
+            recalculateAndDisplayFinalRating(); 
+        }
+        
+        // Función para renderizar comentarios
+        function renderCommentsInModal(comments) {
+            const commentsContainer = document.getElementById('commentsContainer');
+            let html = '';
+
+            if (comments.length === 0) {
+                html = '<p class="text-center text-gray-500 p-4">No hay comentarios de usuarios registrados.</p>';
+            } else {
+                comments.forEach(comment => {
+                    const dateStr = comment.date ? new Date(comment.date.seconds * 1000).toLocaleDateString('es-ES') : 'Fecha desconocida';
+                    // Simplemente renderizar estrellas amarillas para el comentario
+                    const stars = getCombinedStars(comment.rating || 5, 0); 
+
+                    html += `
+                        <div class="border-b border-gray-200 py-3">
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-800">${comment.author || 'Usuario Anónimo'}</span>
+                                <span class="text-sm text-gray-500">${dateStr}</span>
+                            </div>
+                            <div class="text-sm my-1">${stars}</div>
+                            <p class="text-gray-700 mt-1">${comment.text}</p>
+                        </div>
+                    `;
+                });
+            }
+            commentsContainer.innerHTML = html;
+        }
+
+        // NUEVO: Permite al usuario enviar un comentario (solo si está logueado)
+        async function submitUserComment() {
+            if (!currentEditNurseId) return;
+
+            if (!isUserLoggedIn) {
+                alert("Debe iniciar sesión (Botón 'Acceso Usuarios') para poder dejar un comentario.");
+                openModal('userAuthModal');
+                return;
+            }
+            
+            const commentText = prompt("Ingrese su comentario:");
+            if (!commentText || commentText.trim() === "") return;
+
+            const commentRating = parseFloat(prompt("Ingrese su calificación (1 a 5):"));
+            if (isNaN(commentRating) || commentRating < 1 || commentRating > 5) {
+                alert("Calificación inválida. Debe ser un número entre 1 y 5.");
+                return;
+            }
+
+            const newComment = {
+                author: userEmail,
+                date: new Date(),
+                text: commentText,
+                rating: commentRating,
+            };
+            
+            try {
+                await addDoc(getCommentsCollectionRef(currentEditNurseId), newComment);
+                alert("¡Comentario enviado con éxito!");
+            } catch (e) {
+                console.error("Error al agregar comentario:", e);
+                alert("Error al guardar el comentario en la base de datos.");
+            }
+        }
+
+        let unsubscribeComments = null; // Variable para almacenar el listener de comentarios
+
+        async function openEditModal(nurseId) {
+            if (!isAdminLoggedIn) return;
+            
+            currentEditNurseId = nurseId;
+            const nurse = currentNurses.find(n => n.id === nurseId);
+            if (!nurse) {
+                console.error("Error: Profesional no encontrado con ID:", nurseId);
+                return;
+            }
+
+            // Limpiar listener anterior si existe
+            if (unsubscribeComments) {
+                unsubscribeComments();
+            }
+
+            // 1. Cargar Datos del Profesional en la UI
+            document.getElementById('editModalId').value = nurse.id;
+            document.getElementById('editModalNameTitle').textContent = nurse.name;
+            document.getElementById('editName').value = nurse.name;
+            document.getElementById('editSpecialty').value = nurse.specialty;
+            document.getElementById('editExperience').value = nurse.experience;
+            document.getElementById('editPhone').value = nurse.phone;
+            document.getElementById('editPhotoURL').value = nurse.photoURL || '';
+
+            currentBaseRating = nurse.baseRating || nurse.rating;
+            currentWarnings = nurse.warnings || 0;
+            
+            updateRatingBaseDisplay();
+            updateWarningDisplay();
+            recalculateAndDisplayFinalRating(); 
+
+            // 2. Fetch y Renderizado de Comentarios en Tiempo Real
+            const commentsContainer = document.getElementById('commentsContainer');
+            commentsContainer.innerHTML = '<p class="text-center text-gray-500 p-4">Cargando comentarios...</p>';
+            
+            // Re-establecer el listener de comentarios
+            unsubscribeComments = onSnapshot(query(getCommentsCollectionRef(nurseId)), (snapshot) => {
+                const comments = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                renderCommentsInModal(comments);
+            }, (error) => {
+                console.error("Error al escuchar comentarios:", error);
+                commentsContainer.innerHTML = '<p class="text-center text-red-500 p-4">Error al cargar comentarios.</p>';
+            });
+
+            openModal('editModal');
+        }
+
+        async function saveEdit() {
+            if (!isAdminLoggedIn) {
+                alert("Acceso denegado. Solo el administrador puede editar.");
+                return;
+            }
+            
+            const id = document.getElementById('editModalId').value;
+            const name = document.getElementById('editName').value;
+            const specialty = document.getElementById('editSpecialty').value;
+            const experience = parseInt(document.getElementById('editExperience').value);
+            const baseRating = currentBaseRating; 
+            const phone = document.getElementById('editPhone').value;
+            const photoURL = document.getElementById('editPhotoURL').value || DEFAULT_PHOTO_URL;
+            const warnings = currentWarnings;
+
+            if (!name || !specialty || isNaN(experience) || isNaN(baseRating) || !phone) {
+                alert("Por favor, complete todos los campos y asegúrese de que los números son válidos.");
+                return;
+            }
+            
+            const penalty = warnings * 0.5;
+            let calculatedRating = baseRating - penalty;
+            calculatedRating = Math.max(1.0, calculatedRating);
+            calculatedRating = Math.min(5.0, calculatedRating);
+
+            const updatedNurse = {
+                name,
+                specialty,
+                experience,
+                rating: calculatedRating,
+                baseRating: baseRating,
+                phone,
+                photoURL,
+                warnings,
+            };
+
+            try {
+                const docRef = doc(db, NURSE_COLLECTION_PATH, id);
+                await updateDoc(docRef, updatedNurse);
+                console.log(`Profesional ${id} actualizado con éxito. Rating penalizado: ${calculatedRating.toFixed(1)}`);
+                closeModal('editModal');
+            } catch (e) {
+                console.error("Error al actualizar documento: ", e);
+                alert("Error al guardar los cambios en la base de datos.");
+            }
+        }
+
 
         // --- FUNCIONES DE RENDERIZADO Y UI ---
 
-        function getRatingStars(rating) {
-            const fullStars = Math.floor(rating);
-            const halfStar = rating - fullStars >= 0.5;
-            let stars = '';
+        function getCombinedStars(rating, warnings) {
+            const maxStars = 5;
+            const numRedStars = Math.min(maxStars, warnings || 0);
+            
+            const numFilledYellowSlots = Math.floor(rating);
+            const isHalfStar = rating - numFilledYellowSlots >= 0.5;
 
-            for (let i = 0; i < 5; i++) {
-                if (i < fullStars) {
-                    stars += '<i class="fas fa-star rating-star"></i>';
-                } else if (i === fullStars && halfStar) {
-                    stars += '<i class="fas fa-star-half-alt rating-star"></i>';
+            let combinedHtml = '';
+
+            for (let i = 0; i < maxStars; i++) {
+                if (i < numRedStars) {
+                    combinedHtml += '<i class="fas fa-star warning-star"></i>';
                 } else {
-                    stars += '<i class="far fa-star text-gray-300"></i>';
+                    if (i < numFilledYellowSlots) {
+                        combinedHtml += '<i class="fas fa-star rating-star"></i>';
+                    } else if (i === numFilledYellowSlots && isHalfStar) {
+                        combinedHtml += '<i class="fas fa-star-half-alt rating-star"></i>';
+                    } else {
+                        combinedHtml += '<i class="far fa-star text-gray-300"></i>';
+                    }
                 }
             }
-            return stars;
+            return combinedHtml;
         }
 
         function renderNurses(nurses) {
@@ -479,21 +992,33 @@
                            <i class="fas fa-trash-alt text-sm"></i>
                        </button>`
                     : '';
+                
+                const imageContent = nurse.photoURL && nurse.photoURL !== DEFAULT_PHOTO_URL
+                    ? `<img src="${nurse.photoURL}" alt="Foto de ${nurse.name}" class="profile-img" onerror="this.onerror=null;this.src='${DEFAULT_PHOTO_URL}'">`
+                    : `<div class="placeholder-icon"><i class="fas fa-user-circle"></i></div>`;
+                
+                const nameElement = isAdminLoggedIn
+                    ? `<a href="#" onclick="openEditModal('${nurse.id}'); return false;" class="text-xl font-bold text-gray-900 hover:text-indigo-600 transition duration-150">${nurse.name}</a>`
+                    : `<h3 class="text-xl font-bold text-gray-900">${nurse.name}</h3>`;
 
                 const cardHtml = `
                     <div class="card bg-white rounded-xl p-6 shadow-md border-t-4 border-indigo-500 flex flex-col justify-between">
                         <div>
-                            <div class="flex justify-between items-start mb-4">
-                                <h3 class="text-xl font-bold text-gray-900">${nurse.name}</h3>
+                            <div class="flex items-center mb-4">
+                                ${imageContent}
+                                <div class="ml-4 flex-grow">
+                                    ${nameElement}
+                                    <p class="text-sm font-semibold text-indigo-600">${nurse.specialty}</p>
+                                </div>
                                 ${deleteButtonHtml}
                             </div>
-                            <p class="text-sm font-semibold text-indigo-600 mb-2">${nurse.specialty}</p>
+                            
                             <p class="text-gray-600 mb-1"><i class="fas fa-briefcase mr-2 text-gray-400"></i> ${nurse.experience} años de experiencia</p>
                             <p class="text-gray-600 mb-4"><i class="fas fa-map-marker-alt mr-2 text-gray-400"></i> ${nurse.location}</p>
 
                             <div class="flex items-center mb-4">
                                 <span class="text-base font-bold text-gray-900 mr-2">${nurse.rating.toFixed(1)}</span>
-                                ${getRatingStars(nurse.rating)}
+                                ${getCombinedStars(nurse.rating, nurse.warnings)}
                             </div>
                         </div>
 
@@ -509,18 +1034,26 @@
             });
         }
 
-        // --- FUNCIONES DE BÚSQUEDA Y FILTRO ---
-
         function handleSearch() {
             const searchInput = document.getElementById('searchInput').value.toLowerCase();
             const specialtyFilter = document.getElementById('specialtyFilter').value;
+            const lowRatingChecked = document.getElementById('lowRatingFilter').checked; 
 
             const filteredNurses = currentNurses.filter(nurse => {
-                const nameMatch = nurse.name.toLowerCase().includes(searchInput);
+                const nameMatch = searchInput === '' || nurse.name.toLowerCase().includes(searchInput);
                 const specialtyMatch = specialtyFilter === '' || nurse.specialty === specialtyFilter;
-                const locationMatch = nurse.location === requiredLocation; // Filtro estricto para Mérida
+                const locationMatch = nurse.location === requiredLocation;
 
-                return nameMatch && specialtyMatch && locationMatch;
+                let ratingMatch = true;
+                if (lowRatingChecked) {
+                    const isLowRating = nurse.rating < 3.0;
+                    const hasWarnings = (nurse.warnings || 0) >= 2;
+                    ratingMatch = isLowRating || hasWarnings;
+                } else {
+                    ratingMatch = true;
+                }
+                
+                return nameMatch && specialtyMatch && locationMatch && ratingMatch;
             });
 
             renderNurses(filteredNurses);
@@ -558,17 +1091,37 @@
         
         // --- INICIALIZACIÓN ---
 
-        window.onload = function() {
-            // Asignar listeners a botones de modals
-            document.getElementById('adminAuthButton').onclick = handleAdminAuth;
-            document.getElementById('confirmDeleteButton').onclick = deleteNurse;
-            document.getElementById('searchInput').addEventListener('input', handleSearch);
-            document.getElementById('specialtyFilter').addEventListener('change', handleSearch);
-            
-            // Inicializar Firebase
-            initializeFirebase();
-        };
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // EXPORTAR FUNCIONES AL ÁMBITO GLOBAL
+                window.handleSearch = handleSearch;
+                window.addNurse = addNurse;
+                window.openModal = openModal;
+                window.closeModal = closeModal;
+                window.openContactModal = openContactModal;
+                window.openDeleteModal = openDeleteModal;
+                window.deleteNurse = deleteNurse;
+                window.attemptLoginWithKey = attemptLoginWithKey; 
+                window.openEditModal = openEditModal; 
+                window.saveEdit = saveEdit;           
+                window.updateWarning = updateWarning;
+                window.updateRatingBase = updateRatingBase; 
+                window.submitUserComment = submitUserComment; 
+                window.handleUserAuth = handleUserAuth; 
+                window.handleUserAuthSubmit = handleUserAuthSubmit; 
+                window.handleAdminAuth = handleAdminAuth; 
+                
+                // Asignar listeners a botones de modals
+                document.getElementById('searchInput').addEventListener('input', handleSearch);
+                document.getElementById('specialtyFilter').addEventListener('change', handleSearch);
+                document.getElementById('lowRatingFilter').addEventListener('change', handleSearch);
 
+                // Inicializar Firebase
+                initializeFirebase();
+            } catch(e) {
+                console.error("FATAL ERROR: Fallo al cargar la aplicación principal.", e);
+            }
+        });
     </script>
 </body>
 </html>
