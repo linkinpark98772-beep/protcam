@@ -207,7 +207,7 @@
                     updateAdminUI();
 
                 }, (error) => {
-                    // Este error es común si el documento aún no existe, no es crítico.
+                    // Si falla por permisos o no existe, solo registramos y continuamos.
                     console.error("Error al cargar la configuración de administrador:", error);
                     isAdminLoggedIn = false;
                     updateAdminUI();
@@ -217,6 +217,48 @@
                 console.error("Error al iniciar la escucha de config admin:", error);
                 isAdminLoggedIn = false;
                 updateAdminUI();
+            }
+        }
+        
+        async function saveAdminEmail() {
+            if (!db) {
+                alert("La base de datos no está inicializada. Espere un momento.");
+                return;
+            }
+            
+            try {
+                const docRef = doc(db, ADMIN_CONFIG_PATH);
+                
+                // Intentar obtener el documento actual
+                const docSnap = await getDoc(docRef);
+                let allowedEmails = [];
+                
+                if (docSnap.exists()) {
+                    allowedEmails = docSnap.data().allowedEmails || [];
+                }
+                
+                // Añadir el correo solo si no está ya presente
+                if (!allowedEmails.includes(ADMIN_EMAIL)) {
+                    allowedEmails.push(ADMIN_EMAIL);
+                }
+
+                // Guardar la lista actualizada de correos
+                await setDoc(docRef, { allowedEmails: allowedEmails });
+                
+                alert(`Correo '${ADMIN_EMAIL}' guardado como administrador. Puede que necesite iniciar sesión con Google para verificar el acceso.`);
+                
+                // Ocultar el bloque amarillo
+                const configAlert = document.getElementById('configAlert');
+                if (configAlert) {
+                    configAlert.classList.add('hidden'); 
+                }
+                
+                // Forzar la recarga de la configuración del administrador
+                loadAdminConfig(); 
+                
+            } catch (e) {
+                console.error("Error al guardar el correo de administrador:", e);
+                alert("Error al guardar el correo en la base de datos. Por favor, revise la consola.");
             }
         }
 
@@ -240,36 +282,8 @@
                 console.error("Error al escuchar la colección de enfermeros:", error);
             });
         }
-
-        async function saveAdminEmail() {
-            // Check if Firebase is initialized
-            if (!db) {
-                alert("La base de datos no está inicializada. Espere un momento.");
-                return;
-            }
-            
-            try {
-                const docRef = doc(db, ADMIN_CONFIG_PATH);
-                // Usar setDoc para crear o sobrescribir el documento de configuración con el correo.
-                // IMPORTANTE: Si ya existe una lista, esto la reemplaza, pero para este caso de uso está bien.
-                await setDoc(docRef, { allowedEmails: [ADMIN_EMAIL] });
-                
-                // Mostrar mensaje de éxito
-                alert(`Correo '${ADMIN_EMAIL}' guardado como administrador. Puede que necesite iniciar sesión con Google para verificar el acceso.`);
-                
-                // Ocultar el bloque amarillo
-                document.getElementById('configAlert').classList.add('hidden'); 
-                
-                // Forzar la recarga de la configuración del administrador
-                loadAdminConfig(); 
-                
-            } catch (e) {
-                console.error("Error al guardar el correo de administrador:", e);
-                alert("Error al guardar el correo en la base de datos.");
-            }
-        }
         
-        function initializeFirebase() {
+        async function initializeFirebase() {
             try {
                 if (!db) {
                     const app = initializeApp(firebaseConfig);
@@ -277,7 +291,21 @@
                     auth = getAuth(app);
                 }
 
-                // Listener de autenticación
+                // CRÍTICO: AWAIT DE AUTENTICACIÓN INICIAL
+                // Esperar a que la autenticación anónima/token se resuelva para estabilizar los permisos
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken).catch(e => {
+                        console.error("Error al iniciar sesión con Custom Token:", e);
+                        return signInAnonymously(auth); // Fallback anónimo
+                    });
+                } else {
+                    await signInAnonymously(auth).catch(e => {
+                        console.error("Error al iniciar sesión anónimamente:", e);
+                    });
+                }
+
+
+                // Listener de autenticación (se dispara inmediatamente después del await)
                 onAuthStateChanged(auth, async (user) => {
                     // Este bloque se ejecuta en cada cambio de estado de auth
                     if (user) {
@@ -308,11 +336,21 @@
                     
                     // Iniciamos el listener de datos solo después de que el estado de auth esté listo
                     if (userId) {
-                        // Mostramos el botón amarillo si la configuración no existe
+                        
+                        // Verificar si mostrar el botón amarillo de configuración (si no está ya en la lista)
                         const configAlert = document.getElementById('configAlert');
                         if (configAlert) {
-                            const docSnap = await getDoc(doc(db, ADMIN_CONFIG_PATH));
-                            if (!docSnap.exists() || !(docSnap.data()?.allowedEmails || []).includes(ADMIN_EMAIL)) {
+                            try {
+                                const docSnap = await getDoc(doc(db, ADMIN_CONFIG_PATH));
+                                const allowedEmails = docSnap.exists() ? (docSnap.data().allowedEmails || []) : [];
+                                if (!allowedEmails.includes(ADMIN_EMAIL)) {
+                                    configAlert.classList.remove('hidden');
+                                } else {
+                                    configAlert.classList.add('hidden');
+                                }
+                            } catch (e) {
+                                // Si hay un error de permisos aquí, lo mostramos, pero el listener principal de datos no debería fallar.
+                                console.warn("No se pudo leer la configuración de Admin (posiblemente la primera vez).", e);
                                 configAlert.classList.remove('hidden');
                             }
                         }
@@ -322,17 +360,7 @@
                     }
                 });
 
-                // Intento de inicio de sesión
-                if (initialAuthToken) {
-                    signInWithCustomToken(auth, initialAuthToken).catch(e => {
-                        console.error("Error al iniciar sesión con Custom Token:", e);
-                        signInAnonymously(auth); // Fallback anónimo si el custom token falla
-                    });
-                } else {
-                    signInAnonymously(auth).catch(e => {
-                        console.error("Error al iniciar sesión anónimamente:", e);
-                    });
-                }
+                
             } catch (error) {
                 console.error("Error al inicializar Firebase:", error);
             }
@@ -342,7 +370,7 @@
 
         function updateAdminUI() {
             const panel = document.getElementById('adminPanel');
-            const deleteButtons = document.querySelectorAll('[id^="deleteBtnContainer-"]');
+            // Nota: Los botones de eliminar se actualizan durante renderNurses
 
             if (isAdminLoggedIn) {
                 // Mostrar panel de agregar
@@ -354,16 +382,8 @@
                 panel.classList.add('max-h-0', 'opacity-0');
             }
 
-            // Actualizar visibilidad de botones de eliminar en las tarjetas
-            deleteButtons.forEach(btn => {
-                if (isAdminLoggedIn) {
-                    btn.classList.remove('hidden');
-                } else {
-                    btn.classList.add('hidden');
-                }
-            });
-
-            renderNurses(currentNurses); // Volver a renderizar para actualizar los botones de eliminar
+            // Forzar el renderizado para actualizar visibilidad de botones de eliminar
+            renderNurses(currentNurses); 
         }
 
         async function handleAdminAuth() {
@@ -585,7 +605,7 @@
             document.getElementById('searchInput').addEventListener('input', handleSearch);
             document.getElementById('specialtyFilter').addEventListener('change', handleSearch);
             
-            // CONEXIÓN DEL BOTÓN AMARILLO (si está visible)
+            // CONEXIÓN DEL BOTÓN AMARILLO 
             const saveButton = document.getElementById('saveAdminEmailButton');
             if (saveButton) {
                 saveButton.onclick = saveAdminEmail;
