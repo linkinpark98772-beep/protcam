@@ -39,16 +39,7 @@
     <!-- Panel de Búsqueda y Filtro -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- Bloque de Configuración Inicial (Temporal) -->
-        <div id="configAlert" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6 rounded-lg flex items-center justify-between hidden" role="alert">
-            <div>
-                <p class="font-bold">⚠️ Configuración Inicial Requerida</p>
-                <p class="text-sm">Haga clic para guardar su correo (<span class="font-mono font-semibold">linkinpark98772@gmail.com</span>) en Firebase y activar el modo Admin.</p>
-            </div>
-            <button id="saveAdminEmailButton" class="bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-yellow-600 transition duration-150 ml-4">
-                Guardar Correo en Firebase
-            </button>
-        </div>
+        <!-- Bloque de Configuración Inicial (Eliminado permanentemente) -->
 
         <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
             <h2 class="text-2xl font-semibold text-gray-800 mb-4">Buscar Profesionales en Mérida, Yucatán</h2>
@@ -156,7 +147,7 @@
         const requiredLocation = "Mérida, Yucatán"; 
 
         // CRÍTICO: Rutas de Firebase
-        // RUTA PÚBLICA ESTABLE para la configuración de administrador
+        // RUTA PÚBLICA ESTABLE para la configuración de administrador (LECTURA y ESCRITURA)
         const ADMIN_CONFIG_PATH = `artifacts/${appId}/public/data/config/admin_emails`;
         // RUTA PÚBLICA ESTABLE para los profesionales
         const NURSE_COLLECTION_PATH = `artifacts/${appId}/public/data/nurses_list`;
@@ -196,7 +187,7 @@
 
         async function loadAdminConfig() {
             try {
-                // RUTA PÚBLICA que el usuario anónimo puede leer
+                // Leer desde la RUTA PÚBLICA
                 const docRef = doc(db, ADMIN_CONFIG_PATH);
                 const docSnap = await onSnapshot(docRef, (doc) => {
                     const data = doc.data();
@@ -220,48 +211,6 @@
             }
         }
         
-        async function saveAdminEmail() {
-            if (!db) {
-                alert("La base de datos no está inicializada. Espere un momento.");
-                return;
-            }
-            
-            try {
-                const docRef = doc(db, ADMIN_CONFIG_PATH);
-                
-                // Intentar obtener el documento actual
-                const docSnap = await getDoc(docRef);
-                let allowedEmails = [];
-                
-                if (docSnap.exists()) {
-                    allowedEmails = docSnap.data().allowedEmails || [];
-                }
-                
-                // Añadir el correo solo si no está ya presente
-                if (!allowedEmails.includes(ADMIN_EMAIL)) {
-                    allowedEmails.push(ADMIN_EMAIL);
-                }
-
-                // Guardar la lista actualizada de correos
-                await setDoc(docRef, { allowedEmails: allowedEmails });
-                
-                alert(`Correo '${ADMIN_EMAIL}' guardado como administrador. Puede que necesite iniciar sesión con Google para verificar el acceso.`);
-                
-                // Ocultar el bloque amarillo
-                const configAlert = document.getElementById('configAlert');
-                if (configAlert) {
-                    configAlert.classList.add('hidden'); 
-                }
-                
-                // Forzar la recarga de la configuración del administrador
-                loadAdminConfig(); 
-                
-            } catch (e) {
-                console.error("Error al guardar el correo de administrador:", e);
-                alert("Error al guardar el correo en la base de datos. Por favor, revise la consola.");
-            }
-        }
-
         function setupRealtimeListener() {
             // Cargar datos SÓLO si el usuario está autenticado (anónima o Google)
             if (!userId) {
@@ -283,6 +232,31 @@
             });
         }
         
+        // Función auxiliar para insertar el correo de administrador (USANDO RUTA PÚBLICA GARANTIZADA)
+        async function ensureAdminEmailIsSet(db, adminEmail) {
+            try {
+                const publicDocRef = doc(db, ADMIN_CONFIG_PATH);
+                const docSnap = await getDoc(publicDocRef);
+                
+                let allowedEmails = [];
+                if (docSnap.exists()) {
+                    allowedEmails = docSnap.data().allowedEmails || [];
+                }
+                
+                // Añadir el correo solo si no está ya presente en la lista pública
+                if (!allowedEmails.includes(adminEmail)) {
+                    allowedEmails.push(adminEmail);
+                    await setDoc(publicDocRef, { allowedEmails: allowedEmails });
+                    console.log(`[Admin Setup] Correo '${adminEmail}' agregado a la lista PÚBLICA.`);
+                }
+            } catch (e) {
+                // Capturar errores de permisos, pero permitir que la app continúe
+                console.error("[Admin Setup] Error al asegurar el correo de administrador:", e);
+                console.warn("Este error puede ser causado por permisos de ESCRITURA.");
+            }
+        }
+
+
         async function initializeFirebase() {
             try {
                 if (!db) {
@@ -291,8 +265,7 @@
                     auth = getAuth(app);
                 }
 
-                // CRÍTICO: AWAIT DE AUTENTICACIÓN INICIAL
-                // Esperar a que la autenticación anónima/token se resuelva para estabilizar los permisos
+                // CRÍTICO: 1. AWAIT DE AUTENTICACIÓN INICIAL para obtener el UID
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken).catch(e => {
                         console.error("Error al iniciar sesión con Custom Token:", e);
@@ -303,14 +276,19 @@
                         console.error("Error al iniciar sesión anónimamente:", e);
                     });
                 }
+                
 
-
-                // Listener de autenticación (se dispara inmediatamente después del await)
+                // Listener de autenticación
                 onAuthStateChanged(auth, async (user) => {
                     // Este bloque se ejecuta en cada cambio de estado de auth
                     if (user) {
                         userId = user.uid;
                         userEmail = user.email;
+                        
+                        // CRÍTICO: Intentar insertar el correo cada vez que se resuelve la autenticación
+                        // Esto se hace aquí para asegurar que el AuthState esté resuelto.
+                        await ensureAdminEmailIsSet(db, ADMIN_EMAIL);
+                        
                         if (userEmail) { // Solo mostrar salir si es un usuario con email (no anónimo)
                             document.getElementById('adminAuthButton').textContent = `Salir (${userEmail})`;
                             document.getElementById('adminAuthButton').classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
@@ -337,24 +315,6 @@
                     // Iniciamos el listener de datos solo después de que el estado de auth esté listo
                     if (userId) {
                         
-                        // Verificar si mostrar el botón amarillo de configuración (si no está ya en la lista)
-                        const configAlert = document.getElementById('configAlert');
-                        if (configAlert) {
-                            try {
-                                const docSnap = await getDoc(doc(db, ADMIN_CONFIG_PATH));
-                                const allowedEmails = docSnap.exists() ? (docSnap.data().allowedEmails || []) : [];
-                                if (!allowedEmails.includes(ADMIN_EMAIL)) {
-                                    configAlert.classList.remove('hidden');
-                                } else {
-                                    configAlert.classList.add('hidden');
-                                }
-                            } catch (e) {
-                                // Si hay un error de permisos aquí, lo mostramos, pero el listener principal de datos no debería fallar.
-                                console.warn("No se pudo leer la configuración de Admin (posiblemente la primera vez).", e);
-                                configAlert.classList.remove('hidden');
-                            }
-                        }
-
                         await seedDataIfEmpty();
                         setupRealtimeListener();
                     }
@@ -605,12 +565,6 @@
             document.getElementById('searchInput').addEventListener('input', handleSearch);
             document.getElementById('specialtyFilter').addEventListener('change', handleSearch);
             
-            // CONEXIÓN DEL BOTÓN AMARILLO 
-            const saveButton = document.getElementById('saveAdminEmailButton');
-            if (saveButton) {
-                saveButton.onclick = saveAdminEmail;
-            }
-
             // Inicializar Firebase
             initializeFirebase();
         };
