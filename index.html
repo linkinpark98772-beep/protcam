@@ -38,6 +38,18 @@
 
     <!-- Panel de Búsqueda y Filtro -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Bloque de Configuración Inicial (Temporal) -->
+        <div id="configAlert" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6 rounded-lg flex items-center justify-between hidden" role="alert">
+            <div>
+                <p class="font-bold">⚠️ Configuración Inicial Requerida</p>
+                <p class="text-sm">Haga clic para guardar su correo (<span class="font-mono font-semibold">linkinpark98772@gmail.com</span>) en Firebase y activar el modo Admin.</p>
+            </div>
+            <button id="saveAdminEmailButton" class="bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-yellow-600 transition duration-150 ml-4">
+                Guardar Correo en Firebase
+            </button>
+        </div>
+
         <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
             <h2 class="text-2xl font-semibold text-gray-800 mb-4">Buscar Profesionales en Mérida, Yucatán</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -228,8 +240,35 @@
                 console.error("Error al escuchar la colección de enfermeros:", error);
             });
         }
-        
 
+        async function saveAdminEmail() {
+            // Check if Firebase is initialized
+            if (!db) {
+                alert("La base de datos no está inicializada. Espere un momento.");
+                return;
+            }
+            
+            try {
+                const docRef = doc(db, ADMIN_CONFIG_PATH);
+                // Usar setDoc para crear o sobrescribir el documento de configuración con el correo.
+                // IMPORTANTE: Si ya existe una lista, esto la reemplaza, pero para este caso de uso está bien.
+                await setDoc(docRef, { allowedEmails: [ADMIN_EMAIL] });
+                
+                // Mostrar mensaje de éxito
+                alert(`Correo '${ADMIN_EMAIL}' guardado como administrador. Puede que necesite iniciar sesión con Google para verificar el acceso.`);
+                
+                // Ocultar el bloque amarillo
+                document.getElementById('configAlert').classList.add('hidden'); 
+                
+                // Forzar la recarga de la configuración del administrador
+                loadAdminConfig(); 
+                
+            } catch (e) {
+                console.error("Error al guardar el correo de administrador:", e);
+                alert("Error al guardar el correo en la base de datos.");
+            }
+        }
+        
         function initializeFirebase() {
             try {
                 if (!db) {
@@ -269,6 +308,15 @@
                     
                     // Iniciamos el listener de datos solo después de que el estado de auth esté listo
                     if (userId) {
+                        // Mostramos el botón amarillo si la configuración no existe
+                        const configAlert = document.getElementById('configAlert');
+                        if (configAlert) {
+                            const docSnap = await getDoc(doc(db, ADMIN_CONFIG_PATH));
+                            if (!docSnap.exists() || !(docSnap.data()?.allowedEmails || []).includes(ADMIN_EMAIL)) {
+                                configAlert.classList.remove('hidden');
+                            }
+                        }
+
                         await seedDataIfEmpty();
                         setupRealtimeListener();
                     }
@@ -537,6 +585,12 @@
             document.getElementById('searchInput').addEventListener('input', handleSearch);
             document.getElementById('specialtyFilter').addEventListener('change', handleSearch);
             
+            // CONEXIÓN DEL BOTÓN AMARILLO (si está visible)
+            const saveButton = document.getElementById('saveAdminEmailButton');
+            if (saveButton) {
+                saveButton.onclick = saveAdminEmail;
+            }
+
             // Inicializar Firebase
             initializeFirebase();
         };
