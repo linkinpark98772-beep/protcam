@@ -1,0 +1,546 @@
+<!--
+  Buscador de Enfermeros y Cuidadores en Mérida, Yucatán
+  Funcionalidad completa con Firebase Firestore y autenticación de administrador por Google.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Enfermeros en Mérida</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { transition: all 0.2s ease-in-out; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); }
+        .admin-btn { transition: background-color 0.2s; }
+        .admin-panel { transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); z-index: 1000; }
+        .rating-star { color: #facc15; }
+        .delete-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header y Navegación -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-indigo-700">
+                <i class="fas fa-search mr-2"></i> Enfermeros Yucatán
+            </h1>
+            <button id="adminAuthButton" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-indigo-700 admin-btn">
+                <i class="fab fa-google mr-2"></i> Admin Login
+            </button>
+        </div>
+    </header>
+
+    <!-- Panel de Búsqueda y Filtro -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Buscar Profesionales en Mérida, Yucatán</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="searchInput" placeholder="Buscar por nombre..." class="p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                <select id="specialtyFilter" class="p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                    <option value="">Todas las Especialidades</option>
+                    <option value="General">General</option>
+                    <option value="Pediatría">Pediatría</option>
+                    <option value="Geriatría">Geriatría</option>
+                    <option value="Cuidados Intensivos">Cuidados Intensivos</option>
+                    <option value="Cuidador">Cuidador</option>
+                    <option value="Fisioterapia">Fisioterapia</option>
+                </select>
+                <button onclick="handleSearch()" class="bg-indigo-600 text-white p-3 rounded-lg font-semibold shadow hover:bg-indigo-700 transition duration-150">
+                    <i class="fas fa-search mr-2"></i> Buscar
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel de Administración (Agregar Profesional) - Inicialmente Oculto -->
+        <div id="adminPanel" class="bg-indigo-100 border border-indigo-300 p-6 rounded-xl shadow-lg mb-8 max-h-0 opacity-0 overflow-hidden">
+            <h3 class="text-xl font-semibold text-indigo-700 mb-4">Panel de Administración (Agregar)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" id="adminName" placeholder="Nombre" class="p-3 border border-indigo-300 rounded-lg">
+                <select id="adminSpecialty" class="p-3 border border-indigo-300 rounded-lg bg-white">
+                    <option value="General">General</option>
+                    <option value="Pediatría">Pediatría</option>
+                    <option value="Geriatría">Geriatría</option>
+                    <option value="Cuidados Intensivos">Cuidados Intensivos</option>
+                    <option value="Cuidador">Cuidador</option>
+                    <option value="Fisioterapia">Fisioterapia</option>
+                </select>
+                <input type="number" id="adminExperience" placeholder="Años Exp." class="p-3 border border-indigo-300 rounded-lg" min="0">
+                <input type="number" id="adminRating" placeholder="Rating (1-5)" class="p-3 border border-indigo-300 rounded-lg" min="1" max="5" step="0.1">
+            </div>
+            <div class="mt-4">
+                <input type="text" id="adminPhone" placeholder="Teléfono de Contacto" class="p-3 border border-indigo-300 rounded-lg w-full mb-4">
+                <button onclick="addNurse()" class="w-full bg-green-600 text-white p-3 rounded-lg font-semibold shadow-md hover:bg-green-700 transition duration-150">
+                    <i class="fas fa-plus-circle mr-2"></i> + Agregar Nuevo Profesional
+                </button>
+            </div>
+        </div>
+
+        <!-- Lista de Enfermeros (Resultado de la Búsqueda) -->
+        <div id="nursesList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Las tarjetas de enfermeros se insertarán aquí -->
+        </div>
+
+        <!-- Mensaje de No Resultados -->
+        <div id="noResults" class="text-center p-12 bg-white rounded-xl shadow-lg mt-8 hidden">
+            <i class="fas fa-exclamation-circle text-5xl text-gray-400 mb-4"></i>
+            <p class="text-xl text-gray-600">No se encontraron profesionales con esos criterios en Mérida, Yucatán.</p>
+        </div>
+    </main>
+
+    <!-- Modal de Contacto -->
+    <div id="contactModal" class="fixed inset-0 hidden modal-overlay items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0">
+            <h3 class="text-2xl font-bold text-indigo-700 mb-4" id="modalName"></h3>
+            <p class="text-gray-700 mb-2"><i class="fas fa-user-tag text-indigo-500 mr-2"></i> Especialidad: <span id="modalSpecialty" class="font-semibold"></span></p>
+            <p class="text-gray-700 mb-4"><i class="fas fa-map-marker-alt text-indigo-500 mr-2"></i> Ubicación: <span id="modalLocation">Mérida, Yucatán</span></p>
+
+            <div class="bg-indigo-50 p-4 rounded-lg mb-4">
+                <p class="text-sm font-semibold text-indigo-700 mb-1">Información de Contacto:</p>
+                <p class="text-lg font-bold text-gray-800" id="modalPhone"></p>
+            </div>
+            <button onclick="closeModal('contactModal')" class="w-full bg-gray-500 text-white p-3 rounded-lg font-semibold shadow hover:bg-gray-600 transition duration-150 mt-2">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Eliminación -->
+    <div id="deleteModal" class="fixed inset-0 hidden modal-overlay items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0">
+            <h3 class="text-xl font-bold text-red-600 mb-4">Confirmar Eliminación</h3>
+            <p class="text-gray-700 mb-6">¿Está seguro de que desea eliminar a <span id="deleteModalName" class="font-bold"></span> de la lista?</p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeModal('deleteModal')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-100">Cancelar</button>
+                <button id="confirmDeleteButton" class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold shadow hover:bg-red-700 transition duration-150">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, getDocs, where, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        let db;
+        let auth;
+        let userId = null;
+        let userEmail = null;
+        let isAdminLoggedIn = false;
+        let currentNurses = [];
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // CRÍTICO: Correo de administrador para verificar permisos
+        const ADMIN_EMAIL = "linkinpark98772@gmail.com"; 
+
+        // CRÍTICO: Ubicación de los profesionales
+        const requiredLocation = "Mérida, Yucatán"; 
+
+        // CRÍTICO: Rutas de Firebase
+        // RUTA PÚBLICA ESTABLE para la configuración de administrador
+        const ADMIN_CONFIG_PATH = `artifacts/${appId}/public/data/config/admin_emails`;
+        // RUTA PÚBLICA ESTABLE para los profesionales
+        const NURSE_COLLECTION_PATH = `artifacts/${appId}/public/data/nurses_list`;
+
+
+        // Datos de ejemplo para poblar la base de datos si está vacía
+        const mockNurses = [
+            { name: 'Laura Gómez', specialty: 'General', experience: 10, rating: 4.8, location: requiredLocation, phone: '9991234567' },
+            { name: 'Roberto Pool', specialty: 'Pediatría', experience: 5, rating: 4.5, location: requiredLocation, phone: '9998765432' },
+            { name: 'María Chan', specialty: 'Geriatría', experience: 15, rating: 4.9, location: requiredLocation, phone: '9995551212' },
+            { name: 'Daniel Pérez', specialty: 'Cuidador', experience: 7, rating: 4.2, location: requiredLocation, phone: '9993339988' },
+            { name: 'Miguel Dzul', specialty: 'Fisioterapia', experience: 6, rating: 4.7, location: requiredLocation, phone: '9992224455' },
+            { name: 'Elena Cauich', specialty: 'Pediatría', experience: 3, rating: 4.0, location: requiredLocation, phone: '9991116677' },
+            { name: 'Gabriel Xiu', specialty: 'General', experience: 8, rating: 4.6, location: requiredLocation, phone: '9997778899' },
+            { name: 'Sofía Mena', specialty: 'Cuidados Intensivos', experience: 12, rating: 5.0, location: requiredLocation, phone: '9994443322' },
+        ];
+        
+        // --- FUNCIONES DE BASE DE DATOS Y AUTENTICACIÓN ---
+
+        async function seedDataIfEmpty() {
+            try {
+                const q = query(collection(db, NURSE_COLLECTION_PATH));
+                const snapshot = await getDocs(q);
+
+                if (snapshot.empty) {
+                    console.log("Base de datos de enfermeros vacía. Agregando datos de ejemplo...");
+                    for (const nurse of mockNurses) {
+                        // Usar addDoc para dejar que Firebase genere el ID
+                        await addDoc(collection(db, NURSE_COLLECTION_PATH), nurse);
+                    }
+                    console.log("Datos de ejemplo agregados con éxito.");
+                }
+            } catch (error) {
+                console.error("Error al poblar la base de datos:", error);
+            }
+        }
+
+        async function loadAdminConfig() {
+            try {
+                // RUTA PÚBLICA que el usuario anónimo puede leer
+                const docRef = doc(db, ADMIN_CONFIG_PATH);
+                const docSnap = await onSnapshot(docRef, (doc) => {
+                    const data = doc.data();
+                    const allowedEmails = data ? (data.allowedEmails || []) : [];
+                    
+                    // Comprobar si el usuario logueado es administrador
+                    isAdminLoggedIn = userEmail !== null && allowedEmails.includes(userEmail);
+                    updateAdminUI();
+
+                }, (error) => {
+                    // Este error es común si el documento aún no existe, no es crítico.
+                    console.error("Error al cargar la configuración de administrador:", error);
+                    isAdminLoggedIn = false;
+                    updateAdminUI();
+                });
+                return docSnap;
+            } catch (error) {
+                console.error("Error al iniciar la escucha de config admin:", error);
+                isAdminLoggedIn = false;
+                updateAdminUI();
+            }
+        }
+
+        function setupRealtimeListener() {
+            // Cargar datos SÓLO si el usuario está autenticado (anónima o Google)
+            if (!userId) {
+                console.error("No se puede iniciar el listener: Usuario no autenticado.");
+                return;
+            }
+
+            const nurseQuery = query(collection(db, NURSE_COLLECTION_PATH));
+
+            onSnapshot(nurseQuery, (snapshot) => {
+                currentNurses = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                // Forzar el renderizado de la lista con todos los filtros
+                handleSearch(); 
+            }, (error) => {
+                console.error("Error al escuchar la colección de enfermeros:", error);
+            });
+        }
+        
+
+        function initializeFirebase() {
+            try {
+                if (!db) {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                }
+
+                // Listener de autenticación
+                onAuthStateChanged(auth, async (user) => {
+                    // Este bloque se ejecuta en cada cambio de estado de auth
+                    if (user) {
+                        userId = user.uid;
+                        userEmail = user.email;
+                        if (userEmail) { // Solo mostrar salir si es un usuario con email (no anónimo)
+                            document.getElementById('adminAuthButton').textContent = `Salir (${userEmail})`;
+                            document.getElementById('adminAuthButton').classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                            document.getElementById('adminAuthButton').classList.add('bg-red-500', 'hover:bg-red-600');
+                        } else {
+                            // Es usuario anónimo, mostrar login
+                            document.getElementById('adminAuthButton').textContent = 'Admin Login';
+                            document.getElementById('adminAuthButton').classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                            document.getElementById('adminAuthButton').classList.remove('bg-red-500', 'hover:bg-red-600');
+                        }
+                        
+                    } else {
+                        // No hay usuario logueado (ni anónimo ni Google)
+                        userId = null;
+                        userEmail = null;
+                        document.getElementById('adminAuthButton').textContent = 'Admin Login';
+                        document.getElementById('adminAuthButton').classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                        document.getElementById('adminAuthButton').classList.remove('bg-red-500', 'hover:bg-red-600');
+                    }
+                    
+                    // Después de actualizar userId/userEmail, comprobamos el acceso
+                    await loadAdminConfig();
+                    
+                    // Iniciamos el listener de datos solo después de que el estado de auth esté listo
+                    if (userId) {
+                        await seedDataIfEmpty();
+                        setupRealtimeListener();
+                    }
+                });
+
+                // Intento de inicio de sesión
+                if (initialAuthToken) {
+                    signInWithCustomToken(auth, initialAuthToken).catch(e => {
+                        console.error("Error al iniciar sesión con Custom Token:", e);
+                        signInAnonymously(auth); // Fallback anónimo si el custom token falla
+                    });
+                } else {
+                    signInAnonymously(auth).catch(e => {
+                        console.error("Error al iniciar sesión anónimamente:", e);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al inicializar Firebase:", error);
+            }
+        }
+        
+        // --- FUNCIONES DE ADMINISTRACIÓN ---
+
+        function updateAdminUI() {
+            const panel = document.getElementById('adminPanel');
+            const deleteButtons = document.querySelectorAll('[id^="deleteBtnContainer-"]');
+
+            if (isAdminLoggedIn) {
+                // Mostrar panel de agregar
+                panel.classList.remove('max-h-0', 'opacity-0');
+                panel.classList.add('max-h-96', 'opacity-100');
+            } else {
+                // Ocultar panel de agregar
+                panel.classList.remove('max-h-96', 'opacity-100');
+                panel.classList.add('max-h-0', 'opacity-0');
+            }
+
+            // Actualizar visibilidad de botones de eliminar en las tarjetas
+            deleteButtons.forEach(btn => {
+                if (isAdminLoggedIn) {
+                    btn.classList.remove('hidden');
+                } else {
+                    btn.classList.add('hidden');
+                }
+            });
+
+            renderNurses(currentNurses); // Volver a renderizar para actualizar los botones de eliminar
+        }
+
+        async function handleAdminAuth() {
+            if (userEmail) {
+                // Cerrar sesión
+                try {
+                    await signOut(auth);
+                    isAdminLoggedIn = false;
+                    userEmail = null;
+                    updateAdminUI();
+                } catch (error) {
+                    console.error("Error al cerrar sesión:", error);
+                }
+            } else {
+                // Iniciar sesión con Google
+                const provider = new GoogleAuthProvider();
+                try {
+                    await signInWithPopup(auth, provider);
+                    // onAuthStateChanged se encarga de actualizar el estado y el UI
+                } catch (error) {
+                    console.error("Error de autenticación con Google:", error);
+                    // El error auth/unauthorized-domain es común en este entorno
+                    alert("Error de inicio de sesión. Por favor, asegúrese de que el dominio está autorizado.");
+                }
+            }
+        }
+
+        async function addNurse() {
+            if (!isAdminLoggedIn) {
+                alert("Acceso denegado. Solo el administrador puede agregar profesionales.");
+                return;
+            }
+
+            const name = document.getElementById('adminName').value;
+            const specialty = document.getElementById('adminSpecialty').value;
+            const experience = parseInt(document.getElementById('adminExperience').value);
+            const rating = parseFloat(document.getElementById('adminRating').value);
+            const phone = document.getElementById('adminPhone').value;
+
+            if (!name || !specialty || isNaN(experience) || isNaN(rating) || !phone) {
+                alert("Por favor, complete todos los campos y asegúrese de que los números son válidos.");
+                return;
+            }
+
+            const newNurse = {
+                name,
+                specialty,
+                experience: experience,
+                rating: Math.min(5, Math.max(1, rating)), // Asegura que el rating esté entre 1 y 5
+                location: requiredLocation,
+                phone,
+            };
+
+            try {
+                await addDoc(collection(db, NURSE_COLLECTION_PATH), newNurse);
+                // Limpiar formulario
+                document.getElementById('adminName').value = '';
+                document.getElementById('adminExperience').value = '';
+                document.getElementById('adminRating').value = '';
+                document.getElementById('adminPhone').value = '';
+                console.log("Profesional agregado con éxito.");
+            } catch (e) {
+                console.error("Error al agregar documento: ", e);
+                alert("Error al guardar en la base de datos.");
+            }
+        }
+
+        // Se usa para almacenar el ID del documento a eliminar
+        let nurseToDeleteId = null; 
+
+        function openDeleteModal(id, name) {
+            if (!isAdminLoggedIn) return;
+            nurseToDeleteId = id;
+            document.getElementById('deleteModalName').textContent = name;
+            openModal('deleteModal');
+        }
+
+        async function deleteNurse() {
+            if (!isAdminLoggedIn || !nurseToDeleteId) {
+                console.error("Acceso denegado o ID no definido.");
+                closeModal('deleteModal');
+                return;
+            }
+
+            try {
+                const docRef = doc(db, NURSE_COLLECTION_PATH, nurseToDeleteId);
+                await deleteDoc(docRef);
+                console.log(`Profesional ${nurseToDeleteId} eliminado con éxito.`);
+                closeModal('deleteModal');
+                nurseToDeleteId = null;
+            } catch (e) {
+                console.error("Error al eliminar documento: ", e);
+                alert("Error al eliminar el profesional de la base de datos.");
+                closeModal('deleteModal');
+            }
+        }
+
+
+        // --- FUNCIONES DE RENDERIZADO Y UI ---
+
+        function getRatingStars(rating) {
+            const fullStars = Math.floor(rating);
+            const halfStar = rating - fullStars >= 0.5;
+            let stars = '';
+
+            for (let i = 0; i < 5; i++) {
+                if (i < fullStars) {
+                    stars += '<i class="fas fa-star rating-star"></i>';
+                } else if (i === fullStars && halfStar) {
+                    stars += '<i class="fas fa-star-half-alt rating-star"></i>';
+                } else {
+                    stars += '<i class="far fa-star text-gray-300"></i>';
+                }
+            }
+            return stars;
+        }
+
+        function renderNurses(nurses) {
+            const listContainer = document.getElementById('nursesList');
+            const noResults = document.getElementById('noResults');
+            listContainer.innerHTML = '';
+
+            if (nurses.length === 0) {
+                noResults.classList.remove('hidden');
+                return;
+            }
+
+            noResults.classList.add('hidden');
+
+            nurses.forEach(nurse => {
+                const deleteButtonHtml = isAdminLoggedIn 
+                    ? `<button onclick="openDeleteModal('${nurse.id}', '${nurse.name}')" class="delete-btn bg-red-500 text-white rounded-lg shadow hover:bg-red-600 p-2.5 ml-2 transition duration-150" title="Eliminar">
+                           <i class="fas fa-trash-alt text-sm"></i>
+                       </button>`
+                    : '';
+
+                const cardHtml = `
+                    <div class="card bg-white rounded-xl p-6 shadow-md border-t-4 border-indigo-500 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-xl font-bold text-gray-900">${nurse.name}</h3>
+                                ${deleteButtonHtml}
+                            </div>
+                            <p class="text-sm font-semibold text-indigo-600 mb-2">${nurse.specialty}</p>
+                            <p class="text-gray-600 mb-1"><i class="fas fa-briefcase mr-2 text-gray-400"></i> ${nurse.experience} años de experiencia</p>
+                            <p class="text-gray-600 mb-4"><i class="fas fa-map-marker-alt mr-2 text-gray-400"></i> ${nurse.location}</p>
+
+                            <div class="flex items-center mb-4">
+                                <span class="text-base font-bold text-gray-900 mr-2">${nurse.rating.toFixed(1)}</span>
+                                ${getRatingStars(nurse.rating)}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex space-x-3">
+                            <button onclick="openContactModal('${nurse.name}', '${nurse.specialty}', '${nurse.location}', '${nurse.phone}')"
+                                class="flex-grow bg-indigo-600 text-white p-3 rounded-lg font-semibold shadow-md hover:bg-indigo-700 transition duration-150">
+                                <i class="fas fa-phone mr-2"></i> Contactar
+                            </button>
+                        </div>
+                    </div>
+                `;
+                listContainer.innerHTML += cardHtml;
+            });
+        }
+
+        // --- FUNCIONES DE BÚSQUEDA Y FILTRO ---
+
+        function handleSearch() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const specialtyFilter = document.getElementById('specialtyFilter').value;
+
+            const filteredNurses = currentNurses.filter(nurse => {
+                const nameMatch = nurse.name.toLowerCase().includes(searchInput);
+                const specialtyMatch = specialtyFilter === '' || nurse.specialty === specialtyFilter;
+                const locationMatch = nurse.location === requiredLocation; // Filtro estricto para Mérida
+
+                return nameMatch && specialtyMatch && locationMatch;
+            });
+
+            renderNurses(filteredNurses);
+        }
+
+        // --- FUNCIONES DE MODAL Y UI ---
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            const content = modal.querySelector('div:nth-child(1)'); 
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            const content = modal.querySelector('div:nth-child(1)');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function openContactModal(name, specialty, location, phone) {
+            document.getElementById('modalName').textContent = name;
+            document.getElementById('modalSpecialty').textContent = specialty;
+            document.getElementById('modalLocation').textContent = location;
+            document.getElementById('modalPhone').textContent = phone;
+            openModal('contactModal');
+        }
+        
+        // --- INICIALIZACIÓN ---
+
+        window.onload = function() {
+            // Asignar listeners a botones de modals
+            document.getElementById('adminAuthButton').onclick = handleAdminAuth;
+            document.getElementById('confirmDeleteButton').onclick = deleteNurse;
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            document.getElementById('specialtyFilter').addEventListener('change', handleSearch);
+            
+            // Inicializar Firebase
+            initializeFirebase();
+        };
+
+    </script>
+</body>
+</html>
