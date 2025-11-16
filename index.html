@@ -55,10 +55,10 @@
       <h1 id="app-title" class="text-2xl font-bold text-gray-900">Plataforma de Cuidados de Salud</h1>
       <p id="city-name" class="text-sm text-gray-600">Mérida, Yucatán</p>
      </div>
-     <div id="auth-buttons" class="flex space-x-3"><button id="login-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"> <i class="fas fa-sign-in-alt mr-2"></i>Acceder / Registrarse </button> <button id="admin-btn" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"> <i class="fas fa-user-shield mr-2"></i>Acceso Admin </button>
+     <div id="auth-buttons" class="flex space-x-3"><button id="google-login-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"> <i class="fab fa-google mr-2"></i>Iniciar Sesión con Google </button> <button id="admin-btn" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"> <i class="fas fa-user-shield mr-2"></i>Acceso Admin </button>
      </div>
      <div id="user-menu" class="hidden flex items-center space-x-3">
-      <div class="flex items-center space-x-2"><span id="user-name" class="text-gray-700"></span> <span id="user-badge" class="hidden px-2 py-1 text-xs text-white rounded-full bg-green-600"> <i class="fas fa-check-circle mr-1"></i>Verificado </span>
+      <div class="flex items-center space-x-2"><img id="user-avatar" src="" alt="Avatar" class="w-8 h-8 rounded-full"> <span id="user-name" class="text-gray-700"></span> <span id="user-badge" class="hidden px-2 py-1 text-xs text-white rounded-full bg-green-600"> <i class="fas fa-check-circle mr-1"></i>Verificado </span>
       </div><button id="logout-btn" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"> <i class="fas fa-sign-out-alt mr-2"></i>Salir </button>
      </div>
     </div>
@@ -73,25 +73,26 @@
        <p class="text-gray-600">Gestiona tus servicios de salud</p>
       </div>
       <div class="flex items-center space-x-4">
-       <div id="patient-subscription-status" class="px-4 py-2 rounded-lg text-sm font-medium"></div><button id="upgrade-patient-subscription" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"> <i class="fas fa-crown mr-2"></i>Mejorar Plan </button>
+       <div id="patient-subscription-status" class="px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-800"><i class="fas fa-crown mr-1"></i>Plan Premium
+       </div><button id="upgrade-patient-subscription" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"> <i class="fas fa-crown mr-2"></i>Mejorar Plan </button>
       </div>
      </div><!-- Patient Stats -->
      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-blue-50 p-4 rounded-lg">
        <h3 class="font-semibold text-blue-900">Servicios Solicitados</h3>
-       <p id="patient-total-requests" class="text-2xl font-bold text-blue-600">0</p>
+       <p id="patient-total-requests" class="text-2xl font-bold text-blue-600">8</p>
       </div>
       <div class="bg-green-50 p-4 rounded-lg">
        <h3 class="font-semibold text-green-900">Servicios Completados</h3>
-       <p id="patient-completed-services" class="text-2xl font-bold text-green-600">0</p>
+       <p id="patient-completed-services" class="text-2xl font-bold text-green-600">6</p>
       </div>
       <div class="bg-purple-50 p-4 rounded-lg">
        <h3 class="font-semibold text-purple-900">Solicitudes Restantes</h3>
-       <p id="patient-remaining-requests" class="text-2xl font-bold text-purple-600">0</p>
+       <p id="patient-remaining-requests" class="text-2xl font-bold text-purple-600">7</p>
       </div>
       <div class="bg-yellow-50 p-4 rounded-lg">
        <h3 class="font-semibold text-yellow-900">Gasto Total</h3>
-       <p id="patient-total-spent" class="text-2xl font-bold text-yellow-600">$0</p>
+       <p id="patient-total-spent" class="text-2xl font-bold text-yellow-600">$4,800</p>
       </div>
      </div><!-- Quick Actions -->
      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"><button id="find-professional-btn" class="bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700 transition-colors text-left"> <i class="fas fa-search text-2xl mb-2"></i> <h3 class="font-semibold">Buscar Profesional</h3><p class="text-sm opacity-90">Encuentra el cuidado que necesitas</p></button> <button id="post-job-offer-btn" class="bg-green-600 text-white p-4 rounded-lg hover:bg-green-700 transition-colors text-left"> <i class="fas fa-bullhorn text-2xl mb-2"></i> <h3 class="font-semibold">Publicar Oferta</h3><p class="text-sm opacity-90">Que los profesionales te encuentren</p></button> <button id="view-favorites-btn" class="bg-purple-600 text-white p-4 rounded-lg hover:bg-purple-700 transition-colors text-left"> <i class="fas fa-heart text-2xl mb-2"></i> <h3 class="font-semibold">Mis Favoritos</h3><p class="text-sm opacity-90">Profesionales que más te gustan</p></button>
@@ -104,16 +105,56 @@
      </div>
      <div class="p-6">
       <div id="patient-active-requests" class="patient-tab-content">
-       <div id="patient-requests-list" class="space-y-4"></div>
+       <div class="space-y-4">
+        <div class="border rounded-lg p-4">
+         <div class="flex justify-between items-start mb-2">
+          <h4 class="font-semibold text-gray-900">Consulta Médica General</h4><span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">Pendiente</span>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">Dra. María González - Medicina General</p>
+         <p class="text-gray-500 text-xs">Solicitado: 15 Nov 2024 - $800/hora</p>
+        </div>
+        <div class="border rounded-lg p-4">
+         <div class="flex justify-between items-start mb-2">
+          <h4 class="font-semibold text-gray-900">Fisioterapia a Domicilio</h4><span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Confirmado</span>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">Lic. Carlos Mendoza - Fisioterapia</p>
+         <p class="text-gray-500 text-xs">Programado: 18 Nov 2024, 10:00 AM - $600/hora</p>
+        </div>
+       </div>
       </div>
       <div id="patient-service-history" class="patient-tab-content hidden">
-       <div id="patient-history-list" class="space-y-4"></div>
+       <div class="space-y-4">
+        <div class="border rounded-lg p-4">
+         <div class="flex justify-between items-start mb-2">
+          <h4 class="font-semibold text-gray-900">Consulta Nutricional</h4><span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Completado</span>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">Lic. Ana Herrera - Nutrición</p>
+         <div class="flex items-center justify-between">
+          <p class="text-gray-500 text-xs">Completado: 10 Nov 2024 - $500/hora</p>
+          <div class="flex items-center"><span class="text-yellow-500 text-sm">★★★★★</span> <span class="text-gray-500 text-xs ml-1">5.0</span>
+          </div>
+         </div>
+        </div>
+       </div>
       </div>
       <div id="patient-job-offers" class="patient-tab-content hidden">
-       <div id="patient-offers-list" class="space-y-4"></div>
+       <div class="text-center py-8"><i class="fas fa-briefcase text-4xl text-gray-300 mb-4"></i>
+        <h3 class="text-lg font-semibold text-gray-600 mb-2">No has publicado ofertas de trabajo</h3>
+        <p class="text-gray-500 mb-4">Publica una oferta para que los profesionales te contacten</p><button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"> Publicar Primera Oferta </button>
+       </div>
       </div>
       <div id="patient-reviews" class="patient-tab-content hidden">
-       <div id="patient-reviews-list" class="space-y-4"></div>
+       <div class="space-y-4">
+        <div class="border rounded-lg p-4">
+         <div class="flex items-center justify-between mb-2">
+          <h4 class="font-semibold text-gray-900">Reseña para Lic. Ana Herrera</h4>
+          <div class="flex items-center"><span class="text-yellow-500">★★★★★</span> <span class="text-gray-500 text-sm ml-1">5.0</span>
+          </div>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">"Excelente profesional, muy atenta y con gran conocimiento. Las recomendaciones nutricionales fueron muy útiles."</p>
+         <p class="text-gray-500 text-xs">Publicado: 11 Nov 2024</p>
+        </div>
+       </div>
       </div>
      </div>
     </div>
@@ -126,30 +167,32 @@
        <p class="text-gray-600">Gestiona tu práctica profesional</p>
       </div>
       <div class="flex items-center space-x-4">
-       <div id="professional-verification-status" class="px-4 py-2 rounded-lg text-sm font-medium"></div>
-       <div id="professional-subscription-status" class="px-4 py-2 rounded-lg text-sm font-medium"></div><button id="upgrade-professional-subscription" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"> <i class="fas fa-crown mr-2"></i>Mejorar Plan </button>
+       <div id="professional-verification-status" class="px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-800"><i class="fas fa-check-circle mr-1"></i>Verificado
+       </div>
+       <div id="professional-subscription-status" class="px-4 py-2 rounded-lg text-sm font-medium bg-purple-100 text-purple-800"><i class="fas fa-crown mr-1"></i>Plan Premium
+       </div><button id="upgrade-professional-subscription" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"> <i class="fas fa-crown mr-2"></i>Mejorar Plan </button>
       </div>
      </div><!-- Professional Stats -->
      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
       <div class="bg-blue-50 p-4 rounded-lg">
        <h3 class="font-semibold text-blue-900">Solicitudes Recibidas</h3>
-       <p id="professional-total-requests" class="text-2xl font-bold text-blue-600">0</p>
+       <p id="professional-total-requests" class="text-2xl font-bold text-blue-600">24</p>
       </div>
       <div class="bg-green-50 p-4 rounded-lg">
        <h3 class="font-semibold text-green-900">Servicios Completados</h3>
-       <p id="professional-completed-services" class="text-2xl font-bold text-green-600">0</p>
+       <p id="professional-completed-services" class="text-2xl font-bold text-green-600">18</p>
       </div>
       <div class="bg-yellow-50 p-4 rounded-lg">
        <h3 class="font-semibold text-yellow-900">Calificación</h3>
-       <p id="professional-rating" class="text-2xl font-bold text-yellow-600">0.0</p>
+       <p id="professional-rating" class="text-2xl font-bold text-yellow-600">4.8</p>
       </div>
       <div class="bg-purple-50 p-4 rounded-lg">
        <h3 class="font-semibold text-purple-900">Ingresos del Mes</h3>
-       <p id="professional-monthly-earnings" class="text-2xl font-bold text-purple-600">$0</p>
+       <p id="professional-monthly-earnings" class="text-2xl font-bold text-purple-600">$14,400</p>
       </div>
       <div class="bg-red-50 p-4 rounded-lg">
        <h3 class="font-semibold text-red-900">Solicitudes Restantes</h3>
-       <p id="professional-remaining-requests" class="text-2xl font-bold text-red-600">0</p>
+       <p id="professional-remaining-requests" class="text-2xl font-bold text-red-600">13</p>
       </div>
      </div><!-- Quick Actions -->
      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"><button id="update-profile-btn" class="bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700 transition-colors text-left"> <i class="fas fa-user-edit text-2xl mb-2"></i> <h3 class="font-semibold">Actualizar Perfil</h3><p class="text-sm opacity-90">Edita tu información profesional</p></button> <button id="set-availability-btn" class="bg-green-600 text-white p-4 rounded-lg hover:bg-green-700 transition-colors text-left"> <i class="fas fa-calendar-alt text-2xl mb-2"></i> <h3 class="font-semibold">Disponibilidad</h3><p class="text-sm opacity-90">Configura tus horarios</p></button> <button id="view-analytics-btn" class="bg-purple-600 text-white p-4 rounded-lg hover:bg-purple-700 transition-colors text-left"> <i class="fas fa-chart-line text-2xl mb-2"></i> <h3 class="font-semibold">Estadísticas</h3><p class="text-sm opacity-90">Analiza tu rendimiento</p></button> <button id="browse-jobs-btn" class="bg-orange-600 text-white p-4 rounded-lg hover:bg-orange-700 transition-colors text-left"> <i class="fas fa-briefcase text-2xl mb-2"></i> <h3 class="font-semibold">Ofertas de Trabajo</h3><p class="text-sm opacity-90">Encuentra nuevas oportunidades</p></button>
@@ -162,19 +205,108 @@
      </div>
      <div class="p-6">
       <div id="professional-pending-requests" class="professional-tab-content">
-       <div id="professional-requests-list" class="space-y-4"></div>
+       <div class="space-y-4">
+        <div class="border rounded-lg p-4">
+         <div class="flex justify-between items-start mb-2">
+          <h4 class="font-semibold text-gray-900">Consulta Médica General</h4>
+          <div class="flex space-x-2"><button class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">Aceptar</button> <button class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">Rechazar</button>
+          </div>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">Juan Pérez - Paciente Premium</p>
+         <p class="text-gray-500 text-xs">Solicitado: 15 Nov 2024 - $800/hora - Urgente</p>
+        </div>
+        <div class="border rounded-lg p-4">
+         <div class="flex justify-between items-start mb-2">
+          <h4 class="font-semibold text-gray-900">Consulta de Seguimiento</h4>
+          <div class="flex space-x-2"><button class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">Aceptar</button> <button class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">Rechazar</button>
+          </div>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">María López - Paciente Básico</p>
+         <p class="text-gray-500 text-xs">Solicitado: 14 Nov 2024 - $800/hora</p>
+        </div>
+       </div>
       </div>
       <div id="professional-confirmed-services" class="professional-tab-content hidden">
-       <div id="professional-confirmed-list" class="space-y-4"></div>
+       <div class="space-y-4">
+        <div class="border rounded-lg p-4">
+         <div class="flex justify-between items-start mb-2">
+          <h4 class="font-semibold text-gray-900">Consulta Domiciliaria</h4><span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Confirmado</span>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">Ana García - Paciente Premium</p>
+         <p class="text-gray-500 text-xs">Programado: 18 Nov 2024, 2:00 PM - $800/hora</p>
+         <div class="mt-2 flex space-x-2"><button class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">Marcar Completado</button> <button class="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700">Reprogramar</button>
+         </div>
+        </div>
+       </div>
       </div>
       <div id="professional-service-history" class="professional-tab-content hidden">
-       <div id="professional-history-list" class="space-y-4"></div>
+       <div class="space-y-4">
+        <div class="border rounded-lg p-4">
+         <div class="flex justify-between items-start mb-2">
+          <h4 class="font-semibold text-gray-900">Consulta General</h4><span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Completado</span>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">Carlos Mendoza - Paciente Básico</p>
+         <div class="flex items-center justify-between">
+          <p class="text-gray-500 text-xs">Completado: 12 Nov 2024 - $800/hora</p>
+          <div class="flex items-center"><span class="text-yellow-500 text-sm">★★★★★</span> <span class="text-gray-500 text-xs ml-1">5.0</span>
+          </div>
+         </div>
+        </div>
+       </div>
       </div>
       <div id="professional-reviews" class="professional-tab-content hidden">
-       <div id="professional-reviews-list" class="space-y-4"></div>
+       <div class="space-y-4">
+        <div class="border rounded-lg p-4">
+         <div class="flex items-center justify-between mb-2">
+          <h4 class="font-semibold text-gray-900">Reseña de Juan Pérez</h4>
+          <div class="flex items-center"><span class="text-yellow-500">★★★★★</span> <span class="text-gray-500 text-sm ml-1">5.0</span>
+          </div>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">"Excelente doctora, muy profesional y atenta. La consulta fue muy completa y las recomendaciones muy útiles."</p>
+         <p class="text-gray-500 text-xs">Publicado: 13 Nov 2024</p>
+        </div>
+        <div class="border rounded-lg p-4">
+         <div class="flex items-center justify-between mb-2">
+          <h4 class="font-semibold text-gray-900">Reseña de María López</h4>
+          <div class="flex items-center"><span class="text-yellow-500">★★★★☆</span> <span class="text-gray-500 text-sm ml-1">4.0</span>
+          </div>
+         </div>
+         <p class="text-gray-600 text-sm mb-2">"Muy buena atención, llegó puntual y fue muy profesional. Recomendada."</p>
+         <p class="text-gray-500 text-xs">Publicado: 10 Nov 2024</p>
+        </div>
+       </div>
       </div>
       <div id="professional-earnings" class="professional-tab-content hidden">
-       <div id="professional-earnings-content" class="space-y-4"></div>
+       <div class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+         <div class="bg-green-50 p-4 rounded-lg">
+          <h4 class="font-semibold text-green-900">Ingresos Este Mes</h4>
+          <p class="text-2xl font-bold text-green-600">$14,400</p>
+          <p class="text-sm text-green-700">18 servicios completados</p>
+         </div>
+         <div class="bg-blue-50 p-4 rounded-lg">
+          <h4 class="font-semibold text-blue-900">Promedio por Servicio</h4>
+          <p class="text-2xl font-bold text-blue-600">$800</p>
+          <p class="text-sm text-blue-700">Tarifa por hora</p>
+         </div>
+         <div class="bg-purple-50 p-4 rounded-lg">
+          <h4 class="font-semibold text-purple-900">Proyección Mensual</h4>
+          <p class="text-2xl font-bold text-purple-600">$20,000</p>
+          <p class="text-sm text-purple-700">Basado en tendencia actual</p>
+         </div>
+        </div>
+        <div class="border rounded-lg p-4">
+         <h4 class="font-semibold text-gray-900 mb-4">Historial de Pagos</h4>
+         <div class="space-y-2">
+          <div class="flex justify-between items-center py-2 border-b"><span class="text-sm text-gray-600">12 Nov 2024 - Consulta General</span> <span class="font-semibold text-green-600">+$800</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b"><span class="text-sm text-gray-600">10 Nov 2024 - Consulta Domiciliaria</span> <span class="font-semibold text-green-600">+$800</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b"><span class="text-sm text-gray-600">08 Nov 2024 - Consulta de Seguimiento</span> <span class="font-semibold text-green-600">+$800</span>
+          </div>
+         </div>
+        </div>
+       </div>
       </div>
      </div>
     </div>
@@ -221,8 +353,8 @@
        </div>
       </div>
      </div>
-     <div class="mt-8 text-center"><button onclick="showSpecialistModal()" class="bg-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"> <i class="fas fa-rocket mr-2"></i>Comenzar como Profesional </button>
-      <p class="text-sm text-blue-700 mt-2">✅ Prueba gratuita 30 días • ✅ Sin comisiones • ✅ Soporte 24/7</p>
+     <div class="mt-8 text-center"><button onclick="document.getElementById('google-login-btn').click()" class="bg-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"> <i class="fab fa-google mr-2"></i>Registrarse como Profesional </button>
+      <p class="text-sm text-blue-700 mt-2">✅ Registro gratuito • ✅ Con Google • ✅ Verificación incluida</p>
      </div>
     </div><!-- For Patients -->
     <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-8 mb-8">
@@ -262,8 +394,8 @@
        </div>
       </div>
      </div>
-     <div class="mt-8 text-center"><button onclick="showPatientModal()" class="bg-green-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"> <i class="fas fa-search mr-2"></i>Encontrar Profesional Ahora </button>
-      <p class="text-sm text-green-700 mt-2">✅ Prueba gratuita 15 días • ✅ Contacto directo • ✅ Atención inmediata</p>
+     <div class="mt-8 text-center"><button onclick="document.getElementById('google-login-btn').click()" class="bg-green-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"> <i class="fab fa-google mr-2"></i>Registrarse como Paciente </button>
+      <p class="text-sm text-green-700 mt-2">✅ Registro gratuito • ✅ Con Google • ✅ Acceso inmediato</p>
      </div>
     </div><!-- Statistics -->
     <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-white text-center">
@@ -697,6 +829,197 @@
             }
         };
 
+        // Configuración de Google OAuth
+        let googleProvider;
+        
+        // Inicializar Google OAuth
+        function initializeGoogleAuth() {
+            try {
+                googleProvider = new firebase.auth.GoogleAuthProvider();
+                googleProvider.addScope('email');
+                googleProvider.addScope('profile');
+                console.log('✅ Google OAuth inicializado');
+            } catch (error) {
+                console.error('❌ Error inicializando Google OAuth:', error);
+            }
+        }
+
+        // Función de login con Google
+        async function signInWithGoogle() {
+            try {
+                console.log('🔐 Iniciando login con Google...');
+                
+                // Mostrar indicador de carga
+                const googleBtn = document.getElementById('google-login-btn');
+                if (googleBtn) {
+                    googleBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Conectando...';
+                    googleBtn.disabled = true;
+                }
+
+                const result = await auth.signInWithPopup(googleProvider);
+                const user = result.user;
+                
+                console.log('✅ Login exitoso:', user.displayName);
+                
+                // Crear objeto de usuario
+                const userData = {
+                    uid: user.uid,
+                    name: user.displayName,
+                    email: user.email,
+                    picture: user.photoURL,
+                    registrationDate: new Date().toISOString()
+                };
+
+                // Verificar si es primera vez
+                const existingUser = currentData.find(item => item.email === user.email);
+                
+                if (!existingUser) {
+                    // Mostrar modal de selección de tipo de usuario
+                    showUserTypeSelection(userData);
+                } else {
+                    // Usuario existente
+                    currentUser = existingUser;
+                    updateUserInterface();
+                    showSuccessMessage(`¡Bienvenido de vuelta, ${currentUser.name}!`);
+                }
+
+            } catch (error) {
+                console.error('❌ Error en login:', error);
+                
+                if (error.code === 'auth/popup-blocked') {
+                    showErrorMessage('El popup fue bloqueado. Por favor permite popups para este sitio.');
+                } else if (error.code === 'auth/cancelled-popup-request') {
+                    showErrorMessage('Login cancelado.');
+                } else {
+                    showErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
+                }
+            } finally {
+                // Restaurar botón
+                const googleBtn = document.getElementById('google-login-btn');
+                if (googleBtn) {
+                    googleBtn.innerHTML = '<i class="fab fa-google mr-2"></i>Iniciar Sesión con Google';
+                    googleBtn.disabled = false;
+                }
+            }
+        }
+
+        // Mostrar selección de tipo de usuario
+        function showUserTypeSelection(userData) {
+            showModal('Completa tu Registro', `
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-4 border-gray-200">
+                        <img src="${userData.picture}" alt="Foto de perfil" class="w-full h-full object-cover">
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">¡Hola ${userData.name}!</h3>
+                    <p class="text-gray-600">Para completar tu registro, selecciona tu tipo de cuenta:</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <button onclick="completeRegistration('patient', '${JSON.stringify(userData).replace(/"/g, '&quot;')}')" 
+                            class="bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-green-200 rounded-xl p-6 hover:border-green-400 transition-colors text-left group">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-green-600 rounded-full p-3 mr-4 group-hover:bg-green-700 transition-colors">
+                                <i class="fas fa-heart text-white text-xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-green-900">Soy Paciente</h4>
+                        </div>
+                        <p class="text-sm text-green-700">Busco profesionales de salud para cuidados médicos</p>
+                    </button>
+
+                    <button onclick="completeRegistration('nurse', '${JSON.stringify(userData).replace(/"/g, '&quot;')}')" 
+                            class="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-xl p-6 hover:border-blue-400 transition-colors text-left group">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-blue-600 rounded-full p-3 mr-4 group-hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-user-md text-white text-xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-blue-900">Soy Profesional</h4>
+                        </div>
+                        <p class="text-sm text-blue-700">Ofrezco servicios de salud profesionales</p>
+                    </button>
+                </div>
+            `);
+        }
+
+        // Completar registro
+        window.completeRegistration = async function(userType, userDataStr) {
+            try {
+                const userData = JSON.parse(userDataStr.replace(/&quot;/g, '"'));
+                
+                // Crear usuario completo
+                const newUser = {
+                    ...userData,
+                    type: userType,
+                    id: `${userType}_${userData.uid}`,
+                    verified: false,
+                    subscription: {
+                        plan: 'trial',
+                        startDate: new Date().toISOString(),
+                        endDate: new Date(Date.now() + (userType === 'patient' ? 15 : 30) * 24 * 60 * 60 * 1000).toISOString(),
+                        requestsUsed: 0,
+                        requestsLimit: userType === 'patient' ? 5 : 8
+                    }
+                };
+
+                // Agregar campos específicos
+                if (userType === 'nurse') {
+                    newUser.specialty = '';
+                    newUser.experience = 0;
+                    newUser.hourlyRate = 0;
+                    newUser.description = '';
+                    newUser.rating = 0;
+                    newUser.reviewCount = 0;
+                } else {
+                    newUser.age = 0;
+                    newUser.address = '';
+                }
+
+                // Guardar en Firebase
+                const result = await FirebaseService.create(newUser);
+                
+                if (result.isOk) {
+                    currentUser = newUser;
+                    updateUserInterface();
+                    document.querySelector('.fixed').remove();
+                    showSuccessMessage(`¡Registro completado! Bienvenido ${currentUser.name}.`);
+                    
+                    // Mostrar mensaje específico para profesionales
+                    if (userType === 'nurse') {
+                        setTimeout(() => {
+                            showModal('Completa tu Perfil Profesional', `
+                                <div class="text-center mb-6">
+                                    <i class="fas fa-user-md text-4xl text-blue-600 mb-4"></i>
+                                    <h3 class="text-xl font-semibold text-gray-900 mb-2">¡Bienvenido Profesional!</h3>
+                                    <p class="text-gray-600">Para recibir solicitudes, completa tu perfil profesional</p>
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="bg-blue-50 rounded-lg p-4">
+                                        <h4 class="font-semibold text-blue-900 mb-2">Información Requerida:</h4>
+                                        <ul class="text-sm text-blue-700 space-y-1">
+                                            <li>• Especialidad médica</li>
+                                            <li>• Años de experiencia</li>
+                                            <li>• Tarifa por hora</li>
+                                            <li>• Descripción profesional</li>
+                                            <li>• Documentos de verificación</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <button onclick="document.querySelector('.fixed').remove()" 
+                                        class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors mt-4">
+                                    Entendido
+                                </button>
+                            `);
+                        }, 2000);
+                    }
+                } else {
+                    showErrorMessage('Error al completar el registro. Inténtalo de nuevo.');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error completando registro:', error);
+                showErrorMessage('Error al completar el registro.');
+            }
+        };
+
         // Inicializar aplicación con Firebase
         async function initializeApp() {
             try {
@@ -704,6 +1027,9 @@
                 if (!db) {
                     throw new Error('Firebase no está inicializado correctamente');
                 }
+
+                // Inicializar Google OAuth
+                initializeGoogleAuth();
 
                 // Mostrar indicador de carga inicial
                 const container = document.getElementById('nursesList');
@@ -793,6 +1119,7 @@
             const nursesList = document.getElementById('nursesList');
             const userName = document.getElementById('user-name');
             const userBadge = document.getElementById('user-badge');
+            const userAvatar = document.getElementById('user-avatar');
 
             // Verificar que los elementos críticos existen
             if (!authButtons || !userMenu || !mainContent) {
@@ -808,6 +1135,11 @@
                 // Actualizar nombre de usuario
                 if (userName) {
                     userName.textContent = currentUser.name;
+                }
+                
+                // Actualizar avatar
+                if (userAvatar && currentUser.picture) {
+                    userAvatar.src = currentUser.picture;
                 }
                 
                 // Mostrar badge de verificación para profesionales
@@ -868,111 +1200,6 @@
             }
         }
 
-        // Función para mostrar modal de especialista
-        window.showSpecialistModal = function() {
-            showModal('Registro de Profesional de Salud', `
-                <form id="specialist-form" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                            <input type="text" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input type="tel" name="phone" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Especialidad</label>
-                            <select name="specialty" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="">Seleccionar área de especialidad</option>
-                                <option value="enfermeria_general">Enfermería General</option>
-                                <option value="medicina_general">Medicina General</option>
-                                <option value="fisioterapia">Fisioterapia y Rehabilitación</option>
-                                <option value="psicologia">Psicología y Salud Mental</option>
-                                <option value="nutricion">Nutrición y Dietética</option>
-                                <option value="cuidador">Cuidador Profesional</option>
-                                <option value="cuidados_geriatricos">Geriatría y Gerontología</option>
-                                <option value="cuidados_pediatricos">Pediatría y Neonatología</option>
-                                <option value="terapia_ocupacional">Terapia Ocupacional</option>
-                                <option value="cuidados_paliativos">Cuidados Paliativos</option>
-                                <option value="trabajo_social">Trabajo Social en Salud</option>
-                                <option value="cuidados_intensivos">Cuidados Intensivos</option>
-                                <option value="medicina_alternativa">Medicina Alternativa</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Años de Experiencia</label>
-                            <input type="number" name="experience" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Precio por Hora (MXN)</label>
-                            <input type="number" name="hourlyRate" min="100" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Descripción Profesional</label>
-                        <textarea name="description" rows="3" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Describe tu experiencia y servicios..."></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                        <input type="password" name="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" name="terms" required class="mr-2">
-                        <label class="text-sm text-gray-700">Acepto los términos y condiciones</label>
-                    </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                        Registrarse como Profesional
-                    </button>
-                </form>
-            `);
-        };
-
-        // Función para mostrar modal de paciente
-        window.showPatientModal = function() {
-            showModal('Registro de Paciente', `
-                <form id="patient-form" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                            <input type="text" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input type="tel" name="phone" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
-                            <input type="number" name="age" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-                        <textarea name="address" rows="2" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="Dirección completa para servicios a domicilio..."></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                        <input type="password" name="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                    </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" name="terms" required class="mr-2">
-                        <label class="text-sm text-gray-700">Acepto los términos y condiciones</label>
-                    </div>
-                    <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors">
-                        Registrarse como Paciente
-                    </button>
-                </form>
-            `);
-        };
-
         // Función para mostrar modal genérico
         function showModal(title, content) {
             const modal = document.createElement('div');
@@ -991,214 +1218,6 @@
                 </div>
             `;
             document.body.appendChild(modal);
-
-            // Event listeners para formularios
-            const specialistForm = modal.querySelector('#specialist-form');
-            const patientForm = modal.querySelector('#patient-form');
-
-            if (specialistForm) {
-                specialistForm.addEventListener('submit', handleSpecialistRegistration);
-            }
-            if (patientForm) {
-                patientForm.addEventListener('submit', handlePatientRegistration);
-            }
-        }
-
-        // Manejar registro de especialista
-        async function handleSpecialistRegistration(e) {
-            e.preventDefault();
-            
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Registrando...';
-            submitBtn.disabled = true;
-
-            try {
-                const formData = new FormData(e.target);
-                const data = Object.fromEntries(formData);
-
-                // Validaciones
-                if (!data.name || !data.email || !data.phone || !data.specialty || !data.experience || !data.hourlyRate || !data.description || !data.password) {
-                    showErrorMessage('Por favor completa todos los campos obligatorios.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(data.email)) {
-                    showErrorMessage('Por favor ingresa un email válido.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                const experience = parseInt(data.experience);
-                if (isNaN(experience) || experience < 0 || experience > 50) {
-                    showErrorMessage('Por favor ingresa años de experiencia válidos (0-50 años).');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                const hourlyRate = parseInt(data.hourlyRate);
-                if (isNaN(hourlyRate) || hourlyRate < 100 || hourlyRate > 5000) {
-                    showErrorMessage('Por favor ingresa una tarifa válida (100-5000 MXN por hora).');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                // Verificar email duplicado
-                if (currentData && currentData.length > 0) {
-                    const existingUser = currentData.find(item => 
-                        (item.type === 'nurse' || item.type === 'patient') && 
-                        item.email.toLowerCase() === data.email.toLowerCase()
-                    );
-
-                    if (existingUser) {
-                        showErrorMessage('Este email ya está registrado. Intenta con otro email.');
-                        submitBtn.innerHTML = originalText;
-                        submitBtn.disabled = false;
-                        return;
-                    }
-                }
-
-                const nurseData = {
-                    type: 'nurse',
-                    id: 'nurse_' + Date.now().toString(),
-                    name: data.name.trim(),
-                    email: data.email.toLowerCase().trim(),
-                    phone: data.phone.trim(),
-                    specialty: data.specialty,
-                    experience: experience,
-                    hourlyRate: hourlyRate,
-                    description: data.description.trim(),
-                    password: data.password,
-                    verified: false,
-                    rating: 0,
-                    reviewCount: 0,
-                    registrationDate: new Date().toISOString(),
-                    subscription: {
-                        plan: 'trial',
-                        startDate: new Date().toISOString(),
-                        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                        requestsUsed: 0,
-                        requestsLimit: 8
-                    }
-                };
-
-                console.log('🔄 Creando profesional:', nurseData);
-
-                const result = await FirebaseService.create(nurseData);
-                
-                if (result.isOk) {
-                    e.target.closest('.fixed').remove();
-                    showSuccessMessage('¡Registro exitoso! Tu cuenta está pendiente de verificación. Te contactaremos pronto.');
-                } else {
-                    console.error('❌ Error del SDK al crear profesional:', result.error);
-                    showErrorMessage('Error en el sistema. Por favor inténtalo de nuevo en unos momentos.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('💥 Error crítico en registro de profesional:', error);
-                showErrorMessage('Error inesperado. Por favor recarga la página e inténtalo de nuevo.');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }
-        }
-
-        // Manejar registro de paciente
-        async function handlePatientRegistration(e) {
-            e.preventDefault();
-            
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Registrando...';
-            submitBtn.disabled = true;
-
-            try {
-                const formData = new FormData(e.target);
-                const data = Object.fromEntries(formData);
-
-                // Validaciones
-                if (!data.name || !data.email || !data.phone || !data.age || !data.address || !data.password) {
-                    showErrorMessage('Por favor completa todos los campos obligatorios.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(data.email)) {
-                    showErrorMessage('Por favor ingresa un email válido.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                const age = parseInt(data.age);
-                if (isNaN(age) || age < 1 || age > 120) {
-                    showErrorMessage('Por favor ingresa una edad válida (1-120 años).');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                // Verificar email duplicado
-                if (currentData && currentData.length > 0) {
-                    const existingUser = currentData.find(item => 
-                        (item.type === 'nurse' || item.type === 'patient') && 
-                        item.email.toLowerCase() === data.email.toLowerCase()
-                    );
-
-                    if (existingUser) {
-                        showErrorMessage('Este email ya está registrado. Intenta con otro email.');
-                        submitBtn.innerHTML = originalText;
-                        submitBtn.disabled = false;
-                        return;
-                    }
-                }
-
-                const patientData = {
-                    type: 'patient',
-                    id: 'patient_' + Date.now().toString(),
-                    name: data.name.trim(),
-                    email: data.email.toLowerCase().trim(),
-                    phone: data.phone.trim(),
-                    age: age,
-                    address: data.address.trim(),
-                    password: data.password,
-                    registrationDate: new Date().toISOString(),
-                    subscription: {
-                        plan: 'trial',
-                        startDate: new Date().toISOString(),
-                        endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-                        requestsUsed: 0,
-                        requestsLimit: 5
-                    }
-                };
-
-                console.log('🔄 Creando paciente:', patientData);
-
-                const result = await FirebaseService.create(patientData);
-                
-                if (result.isOk) {
-                    e.target.closest('.fixed').remove();
-                    showSuccessMessage('¡Registro exitoso! Ya puedes buscar profesionales de salud.');
-                } else {
-                    console.error('❌ Error del SDK al crear paciente:', result.error);
-                    showErrorMessage('Error en el sistema. Por favor inténtalo de nuevo en unos momentos.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('💥 Error crítico en registro de paciente:', error);
-                showErrorMessage('Error inesperado. Por favor recarga la página e inténtalo de nuevo.');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }
         }
 
         // Funciones de mensajes
@@ -1217,134 +1236,6 @@
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
-
-        // Mostrar modal de login
-        window.showLoginModal = function() {
-            showModal('Iniciar Sesión', `
-                <form id="login-form" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                        <input type="password" name="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                        Iniciar Sesión
-                    </button>
-                </form>
-                
-                <!-- Cuentas de prueba -->
-                <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-                    <h4 class="font-semibold text-blue-900 mb-3">🧪 Cuentas de Prueba</h4>
-                    <div class="space-y-2 text-sm">
-                        <div class="bg-white p-3 rounded border">
-                            <div class="font-medium text-green-800">👤 Paciente de Prueba</div>
-                            <div class="text-gray-600">Email: <code class="bg-gray-100 px-1 rounded">linkinpark987@hotmail.com</code></div>
-                            <div class="text-gray-600">Contraseña: <code class="bg-gray-100 px-1 rounded">admin123</code></div>
-                            <button onclick="fillLoginForm('linkinpark987@hotmail.com', 'admin123')" 
-                                    class="mt-2 text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">
-                                Usar esta cuenta
-                            </button>
-                        </div>
-                        <div class="bg-white p-3 rounded border">
-                            <div class="font-medium text-blue-800">👩‍⚕️ Profesional de Prueba</div>
-                            <div class="text-gray-600">Email: <code class="bg-gray-100 px-1 rounded">maria.gonzalez@email.com</code></div>
-                            <div class="text-gray-600">Contraseña: <code class="bg-gray-100 px-1 rounded">password123</code></div>
-                            <button onclick="fillLoginForm('maria.gonzalez@email.com', 'password123')" 
-                                    class="mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">
-                                Usar esta cuenta
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-4 text-center">
-                    <p class="text-sm text-gray-600">¿No tienes cuenta?</p>
-                    <div class="flex space-x-2 mt-2">
-                        <button onclick="showSpecialistModal()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm">
-                            Registrarse como Profesional
-                        </button>
-                        <button onclick="showPatientModal()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm">
-                            Registrarse como Paciente
-                        </button>
-                    </div>
-                </div>
-            `);
-
-            document.getElementById('login-form').addEventListener('submit', handleLogin);
-        };
-
-        // Manejar login
-        async function handleLogin(e) {
-            e.preventDefault();
-            
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Iniciando sesión...';
-            submitBtn.disabled = true;
-
-            try {
-                const formData = new FormData(e.target);
-                const { email, password } = Object.fromEntries(formData);
-
-                console.log('🔐 Intentando login:', email);
-
-                // Esperar a que los datos estén cargados
-                let attempts = 0;
-                while (currentData.length === 0 && attempts < 20) {
-                    console.log('⏳ Esperando datos... intento', attempts + 1);
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    attempts++;
-                }
-
-                if (currentData.length === 0) {
-                    console.log('❌ No hay datos después de esperar');
-                    showErrorMessage('Sistema aún cargando. Por favor espera unos segundos e inténtalo de nuevo.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                // Buscar usuario
-                const allUsers = currentData.filter(item => item.type === 'nurse' || item.type === 'patient');
-                console.log('👥 Usuarios disponibles:', allUsers.length);
-                
-                const user = allUsers.find(item => {
-                    const emailMatch = item.email.toLowerCase().trim() === email.toLowerCase().trim();
-                    const passwordMatch = item.password === password;
-                    return emailMatch && passwordMatch;
-                });
-
-                if (user) {
-                    console.log('✅ Usuario encontrado:', user.name, user.type);
-                    currentUser = user;
-                    updateUserInterface();
-                    e.target.closest('.fixed').remove();
-                    showSuccessMessage(`¡Bienvenido, ${user.name}!`);
-                } else {
-                    console.log('❌ Credenciales incorrectas');
-                    showErrorMessage('Email o contraseña incorrectos. Verifica los datos e inténtalo de nuevo.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-                
-            } catch (error) {
-                console.error('💥 Error crítico en login:', error);
-                showErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }
-        }
-
-        // Función para llenar formulario de login
-        window.fillLoginForm = function(email, password) {
-            const emailInput = document.querySelector('input[name="email"]');
-            const passwordInput = document.querySelector('input[name="password"]');
-            if (emailInput) emailInput.value = email;
-            if (passwordInput) passwordInput.value = password;
-        };
 
         // Crear datos de ejemplo
         async function createSampleUsers() {
@@ -1375,38 +1266,18 @@
                     `;
                 }
 
-                // Crear usuario de prueba principal
-                const testPatient = {
-                    type: 'patient',
-                    id: 'patient_admin_test',
-                    name: 'Paciente de Prueba',
-                    email: 'linkinpark987@hotmail.com',
-                    phone: '999-000-0000',
-                    age: 35,
-                    address: 'Dirección de Prueba Admin, Mérida, Yucatán',
-                    password: 'admin123',
-                    registrationDate: new Date().toISOString(),
-                    subscription: {
-                        plan: 'premium',
-                        startDate: new Date().toISOString(),
-                        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-                        requestsUsed: 8,
-                        requestsLimit: 15
-                    }
-                };
-
                 // Crear profesional de prueba
                 const testNurse = {
                     type: 'nurse',
                     id: 'nurse_test_001',
                     name: 'Dra. María González',
                     email: 'maria.gonzalez@email.com',
+                    picture: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
                     phone: '999-123-4567',
                     specialty: 'medicina_general',
                     experience: 8,
                     hourlyRate: 800,
                     description: 'Médica general especializada en consultas domiciliarias y medicina preventiva. Más de 8 años de experiencia en hospitales privados de Mérida.',
-                    password: 'password123',
                     verified: true,
                     rating: 4.8,
                     reviewCount: 24,
@@ -1417,6 +1288,26 @@
                         endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
                         requestsUsed: 12,
                         requestsLimit: 25
+                    }
+                };
+
+                // Crear paciente de prueba
+                const testPatient = {
+                    type: 'patient',
+                    id: 'patient_admin_test',
+                    name: 'Juan Pérez',
+                    email: 'juan.perez@email.com',
+                    picture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+                    phone: '999-000-0000',
+                    age: 35,
+                    address: 'Calle 60 x 47, Centro, Mérida, Yucatán',
+                    registrationDate: new Date().toISOString(),
+                    subscription: {
+                        plan: 'premium',
+                        startDate: new Date().toISOString(),
+                        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                        requestsUsed: 8,
+                        requestsLimit: 15
                     }
                 };
 
@@ -1480,10 +1371,72 @@
 
         function updatePatientDashboard() {
             console.log('🏥 Actualizando dashboard del paciente...');
+            // Configurar tabs del paciente
+            setupPatientTabs();
         }
 
         function updateProfessionalDashboard() {
             console.log('👩‍⚕️ Actualizando dashboard del profesional...');
+            // Configurar tabs del profesional
+            setupProfessionalTabs();
+        }
+
+        // Configurar tabs del paciente
+        function setupPatientTabs() {
+            const tabButtons = document.querySelectorAll('.patient-tab-btn');
+            const tabContents = document.querySelectorAll('.patient-tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    // Actualizar botones
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('border-blue-500', 'text-blue-600');
+                        btn.classList.add('border-transparent', 'text-gray-500');
+                    });
+                    button.classList.remove('border-transparent', 'text-gray-500');
+                    button.classList.add('border-blue-500', 'text-blue-600');
+                    
+                    // Actualizar contenido
+                    tabContents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    const targetContent = document.getElementById(`patient-${targetTab}`);
+                    if (targetContent) {
+                        targetContent.classList.remove('hidden');
+                    }
+                });
+            });
+        }
+
+        // Configurar tabs del profesional
+        function setupProfessionalTabs() {
+            const tabButtons = document.querySelectorAll('.professional-tab-btn');
+            const tabContents = document.querySelectorAll('.professional-tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    // Actualizar botones
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('border-blue-500', 'text-blue-600');
+                        btn.classList.add('border-transparent', 'text-gray-500');
+                    });
+                    button.classList.remove('border-transparent', 'text-gray-500');
+                    button.classList.add('border-blue-500', 'text-blue-600');
+                    
+                    // Actualizar contenido
+                    tabContents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    const targetContent = document.getElementById(`professional-${targetTab}`);
+                    if (targetContent) {
+                        targetContent.classList.remove('hidden');
+                    }
+                });
+            });
         }
 
         // Event listeners básicos
@@ -1494,12 +1447,12 @@
             initializeApp();
 
             // Botones de autenticación
-            const loginBtn = document.getElementById('login-btn');
+            const googleLoginBtn = document.getElementById('google-login-btn');
             const logoutBtn = document.getElementById('logout-btn');
             const adminBtn = document.getElementById('admin-btn');
 
-            if (loginBtn) {
-                loginBtn.addEventListener('click', showLoginModal);
+            if (googleLoginBtn) {
+                googleLoginBtn.addEventListener('click', signInWithGoogle);
             }
 
             if (logoutBtn) {
@@ -1597,5 +1550,5 @@
 
         console.log('🎯 Código Firebase cargado completamente');
     </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99f4bc2b64ff8483',t:'MTc2MzI3MjQ4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99f5310f73288483',t:'MTc2MzI3NzI2OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
